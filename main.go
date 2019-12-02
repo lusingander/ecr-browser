@@ -6,10 +6,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
+	"github.com/dustin/go-humanize"
 	"github.com/eihigh/goban"
-	"github.com/gdamore/tcell"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -26,27 +25,23 @@ var (
 	)
 )
 
-func createClient() *ecr.ECR {
-	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(targetRegion),
-	}))
-	svc := ecr.New(sess)
-	return svc
-}
-
 func app(_ context.Context, es goban.Events) error {
 	svc := createClient()
 
 	mainView := newMainView()
-	listView, err := newRepositoryListView(mainView.grid.list, svc)
+	goban.PushView(mainView)
+
+	rlView, err := newRepositoryListView(mainView.grid.list, svc)
 	if err != nil {
 		return err
 	}
-	detailView := newRepositoryDetailView(mainView.grid.detail)
-	listView.addObserver(detailView)
-	goban.PushView(mainView)
-	goban.PushView(listView)
-	goban.PushView(detailView)
+	rdView := newRepositoryDetailView(mainView.grid.detail)
+	rlView.addObserver(rdView)
+	goban.PushView(rlView)
+	goban.PushView(rdView)
+
+	var currentListView listView = rlView
+	var currentDetailView detailView = rdView
 
 	for {
 		goban.Show()
@@ -54,22 +49,40 @@ func app(_ context.Context, es goban.Events) error {
 		k := es.ReadKey()
 		switch k.Rune() {
 		case 'k':
-			listView.selectPrev()
+			currentListView.selectPrev()
 		case 'j':
-			listView.selectNext()
+			currentListView.selectNext()
 		case 'g':
-			listView.selectFirst()
+			currentListView.selectFirst()
 		case 'G':
-			listView.selectLast()
-		default:
-			switch k.Key() {
-			case tcell.KeyUp:
-				listView.selectPrev()
-			case tcell.KeyDown:
-				listView.selectNext()
-			default:
-				return nil
+			currentListView.selectLast()
+		case 'l':
+			if rlView, ok := currentListView.(*repositoryListView); ok {
+				goban.RemoveView(currentListView)
+				goban.RemoveView(currentDetailView)
+				// TODO: cache
+				v, err := newImageListView(mainView.grid.list, svc, rlView.currentRepositoryName())
+				if err != nil {
+					return err
+				}
+				currentListView = v
+				idv := newImageDetailView(mainView.grid.detail)
+				v.addObserver(idv)
+				currentDetailView = idv
+				goban.PushView(currentListView)
+				goban.PushView(currentDetailView)
 			}
+		case 'h':
+			if _, ok := currentListView.(*imageListView); ok {
+				goban.RemoveView(currentListView)
+				goban.RemoveView(currentDetailView)
+				currentListView = rlView
+				currentDetailView = rdView
+				goban.PushView(currentListView)
+				goban.PushView(currentDetailView)
+			}
+		default:
+			return nil
 		}
 	}
 }
@@ -98,6 +111,18 @@ func createGrid(b *goban.Box) *gridLayout {
 	list := b.GridItem(grid, "list")
 	detail := b.GridItem(grid, "detail")
 	return &gridLayout{list, detail}
+}
+
+type listView interface {
+	View()
+	selectNext()
+	selectPrev()
+	selectFirst()
+	selectLast()
+}
+
+type detailView interface {
+	View()
 }
 
 type repositoryDetailView struct {
@@ -131,6 +156,150 @@ func (v *repositoryDetailView) View() {
 		b.Puts("CREATED AT:")
 		b.Puts("  " + v.selected.createdAtStr())
 	}
+}
+
+type imageDetailView struct {
+	box      *goban.Box
+	selected *image
+}
+
+func (v *imageDetailView) update(i *image) {
+	v.selected = i
+}
+
+func newImageDetailView(b *goban.Box) *imageDetailView {
+	return &imageDetailView{b, nil}
+}
+
+func (v *imageDetailView) View() {
+	b := v.box.Enclose("DETAIL")
+	if v.selected != nil {
+		b.Puts("TAGS:")
+		for _, t := range v.selected.getTags() {
+			b.Puts("  " + t)
+		}
+		b.Puts("PUSHED AT:")
+		b.Puts("  " + v.selected.pushedAtStr())
+		b.Puts("DIGEST:")
+		b.Puts("  " + v.selected.digest)
+		b.Puts("SIZE:")
+		b.Puts("  " + v.selected.sizeStr())
+		// TODO: show "selected / total count"
+	}
+}
+
+type image struct {
+	tags     []string
+	pushedAt time.Time
+	digest   string
+	sizeByte int64
+}
+
+func newImage(i *ecr.ImageDetail) *image {
+	return &image{
+		tags:     aws.StringValueSlice(i.ImageTags),
+		pushedAt: aws.TimeValue(i.ImagePushedAt),
+		digest:   aws.StringValue(i.ImageDigest),
+		sizeByte: aws.Int64Value(i.ImageSizeInBytes),
+	}
+}
+
+func (i *image) getFirstTag() string {
+	return i.getTags()[0]
+}
+
+func (i *image) getTags() []string {
+	if len(i.tags) == 0 {
+		return []string{"<untagged>"}
+	}
+	return i.tags
+}
+
+func (i *image) pushedAtStr() string {
+	// TODO: consider timezone
+	return i.pushedAt.Format(datetimeFormat)
+}
+
+func (i *image) sizeStr() string {
+	return humanize.Bytes(uint64(i.sizeByte))
+}
+
+type imageListView struct {
+	cursor    int
+	box       *goban.Box
+	images    []*image
+	observers []imageObserver
+}
+
+func newImageListView(b *goban.Box, svc *ecr.ECR, repoName string) (*imageListView, error) {
+	imgs, err := fetchImages(svc, repoName)
+	if err != nil {
+		return nil, err
+	}
+	return &imageListView{
+		box:    b,
+		images: imgs,
+	}, nil
+}
+
+func (v *imageListView) View() {
+	b := v.box.Enclose("IMAGE LIST")
+	for i, img := range v.images {
+		if v.cursor == i {
+			b.Print("> ")
+		} else {
+			b.Print("  ")
+		}
+		b.Puts(img.getFirstTag())
+	}
+}
+
+func (v *imageListView) selectNext() {
+	if v != nil && v.cursor < len(v.images)-1 {
+		v.cursor++
+		v.notify()
+	}
+}
+
+func (v *imageListView) selectPrev() {
+	if v != nil && v.cursor > 0 {
+		v.cursor--
+		v.notify()
+	}
+}
+
+func (v *imageListView) selectFirst() {
+	if v != nil && v.cursor > 0 {
+		v.cursor = 0
+		v.notify()
+	}
+}
+
+func (v *imageListView) selectLast() {
+	if v != nil && v.cursor < len(v.images)-1 {
+		v.cursor = len(v.images) - 1
+		v.notify()
+	}
+}
+
+func (v *imageListView) notify() {
+	current := v.current()
+	for _, o := range v.observers {
+		o.update(current)
+	}
+}
+
+func (v *imageListView) current() *image {
+	return v.images[v.cursor]
+}
+
+func (v *imageListView) addObserver(o imageObserver) {
+	v.observers = append(v.observers, o)
+	o.update(v.current())
+}
+
+type imageObserver interface {
+	update(i *image)
 }
 
 type repository struct {
@@ -168,26 +337,11 @@ func newRepositoryListView(b *goban.Box, svc *ecr.ECR) (*repositoryListView, err
 	if err != nil {
 		return nil, err
 	}
+	// TODO: sort
 	return &repositoryListView{
 		box:          b,
 		repositories: repos,
 	}, nil
-}
-
-func fetchRepositories(svc *ecr.ECR) ([]*repository, error) {
-	input := &ecr.DescribeRepositoriesInput{
-		MaxResults: aws.Int64(100),
-	}
-	output, err := svc.DescribeRepositories(input)
-	if err != nil {
-		return nil, err
-	}
-	var ret []*repository
-	// TODO: consider NextToken
-	for _, r := range output.Repositories {
-		ret = append(ret, newRepository(r))
-	}
-	return ret, nil
 }
 
 func (v *repositoryListView) View() {
@@ -239,6 +393,10 @@ func (v *repositoryListView) notify() {
 
 func (v *repositoryListView) current() *repository {
 	return v.repositories[v.cursor]
+}
+
+func (v *repositoryListView) currentRepositoryName() string {
+	return v.current().name
 }
 
 func (v *repositoryListView) addObserver(o repositoryObserver) {
