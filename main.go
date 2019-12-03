@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,6 +19,10 @@ const (
 	targetRegion = endpoints.ApNortheast1RegionID
 
 	datetimeFormat = "2006-01-02 15:04:05"
+)
+
+const (
+	countFormat = " %*d/%*d "
 )
 
 var (
@@ -227,7 +233,7 @@ func (i *image) sizeStr() string {
 }
 
 type imageListView struct {
-	cursor    int
+	cur       int
 	box       *goban.Box
 	images    []*image
 	observers []imageObserver
@@ -245,41 +251,51 @@ func newImageListView(b *goban.Box, svc *ecr.ECR, repoName string) (*imageListVi
 }
 
 func (v *imageListView) View() {
+	// TODO: scroll / paging
 	b := v.box.Enclose("IMAGE LIST")
 	for i, img := range v.images {
-		if v.cursor == i {
+		if v.cur == i {
 			b.Print("> ")
 		} else {
 			b.Print("  ")
 		}
 		b.Puts(img.getTag())
 	}
+	createFooter(v.box, v).Print(countStr(v))
+}
+
+func (v *imageListView) length() int {
+	return len(v.images)
+}
+
+func (v *imageListView) cursor() int {
+	return v.cur
 }
 
 func (v *imageListView) selectNext() {
-	if v != nil && v.cursor < len(v.images)-1 {
-		v.cursor++
+	if v != nil && v.cur < len(v.images)-1 {
+		v.cur++
 		v.notify()
 	}
 }
 
 func (v *imageListView) selectPrev() {
-	if v != nil && v.cursor > 0 {
-		v.cursor--
+	if v != nil && v.cur > 0 {
+		v.cur--
 		v.notify()
 	}
 }
 
 func (v *imageListView) selectFirst() {
-	if v != nil && v.cursor > 0 {
-		v.cursor = 0
+	if v != nil && v.cur > 0 {
+		v.cur = 0
 		v.notify()
 	}
 }
 
 func (v *imageListView) selectLast() {
-	if v != nil && v.cursor < len(v.images)-1 {
-		v.cursor = len(v.images) - 1
+	if v != nil && v.cur < len(v.images)-1 {
+		v.cur = len(v.images) - 1
 		v.notify()
 	}
 }
@@ -292,7 +308,7 @@ func (v *imageListView) notify() {
 }
 
 func (v *imageListView) current() *image {
-	return v.images[v.cursor]
+	return v.images[v.cur]
 }
 
 func (v *imageListView) addObserver(o imageObserver) {
@@ -328,7 +344,7 @@ func (r *repository) createdAtStr() string {
 }
 
 type repositoryListView struct {
-	cursor       int
+	cur          int
 	box          *goban.Box
 	repositories []*repository
 	observers    []repositoryObserver
@@ -347,41 +363,77 @@ func newRepositoryListView(b *goban.Box, svc *ecr.ECR) (*repositoryListView, err
 }
 
 func (v *repositoryListView) View() {
+	// TODO: scroll / paging
 	b := v.box.Enclose("REPOSITORY LIST")
 	for i, r := range v.repositories {
-		if v.cursor == i {
+		if v.cursor() == i {
 			b.Print("> ")
 		} else {
 			b.Print("  ")
 		}
 		b.Puts(r.name)
 	}
+	createFooter(v.box, v).Print(countStr(v))
+}
+
+func (v *repositoryListView) length() int {
+	return len(v.repositories)
+}
+
+func (v *repositoryListView) cursor() int {
+	return v.cur
+}
+
+func createFooter(b *goban.Box, c cursorer) *goban.Box {
+	l := calcCountStrMaxLen(c)
+	h := 1
+	y := b.Pos.Y + b.Size.Y - h
+	x := b.Pos.X + b.Size.X - l - 1 // right justify
+	w := l
+	return goban.NewBox(x, y, w, h)
+}
+
+type cursorer interface {
+	length() int
+	cursor() int
+}
+
+func calcCountStrMaxLen(c cursorer) int {
+	l := c.length()
+	n := len(strconv.Itoa(l))
+	return len(fmt.Sprintf(countFormat, n, l, n, l))
+}
+
+func countStr(c cursorer) string {
+	l := c.length()
+	n := len(strconv.Itoa(l))
+	return fmt.Sprintf(countFormat, n, c.cursor()+1, n, l)
 }
 
 func (v *repositoryListView) selectNext() {
-	if v.cursor < len(v.repositories)-1 {
-		v.cursor++
+	if v.cur < len(v.repositories)-1 {
+		v.cur++
 		v.notify()
 	}
 }
 
 func (v *repositoryListView) selectPrev() {
-	if v.cursor > 0 {
-		v.cursor--
+	if v.cur > 0 {
+		v.cur--
 		v.notify()
 	}
 }
 
 func (v *repositoryListView) selectFirst() {
-	if v.cursor > 0 {
-		v.cursor = 0
+	if v.cur > 0 {
+		v.cur = 0
 		v.notify()
 	}
 }
 
 func (v *repositoryListView) selectLast() {
-	if v.cursor < len(v.repositories)-1 {
-		v.cursor = len(v.repositories) - 1
+	if v.cur < len(v.repositories)-1 {
+		v.cur = len(v.repositories) - 1
 		v.notify()
 	}
 }
@@ -394,7 +446,7 @@ func (v *repositoryListView) notify() {
 }
 
 func (v *repositoryListView) current() *repository {
-	return v.repositories[v.cursor]
+	return v.repositories[v.cur]
 }
 
 func (v *repositoryListView) currentRepositoryName() string {
