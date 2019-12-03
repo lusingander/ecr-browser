@@ -4,13 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
-	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ecr"
-	"github.com/dustin/go-humanize"
 	"github.com/eihigh/goban"
 	"github.com/mattn/go-runewidth"
 )
@@ -121,115 +117,15 @@ func createGrid(b *goban.Box) *gridLayout {
 }
 
 type listView interface {
-	View()
+	goban.View
 	selectNext()
 	selectPrev()
 	selectFirst()
 	selectLast()
 }
 
-type detailView interface {
-	View()
-}
-
-type repositoryDetailView struct {
-	box      *goban.Box
-	selected *repository
-}
-
 type repositoryObserver interface {
 	update(r *repository)
-}
-
-func (v *repositoryDetailView) update(r *repository) {
-	v.selected = r
-}
-
-func newRepositoryDetailView(b *goban.Box) *repositoryDetailView {
-	return &repositoryDetailView{b, nil}
-}
-
-func (v *repositoryDetailView) View() {
-	b := v.box.Enclose("DETAIL")
-	if v.selected != nil {
-		b.Puts("NAME:")
-		b.Puts("  " + v.selected.name)
-		b.Puts("URI:")
-		b.Puts("  " + v.selected.uri)
-		b.Puts("ARN:")
-		b.Puts("  " + v.selected.arn)
-		b.Puts("TAG MUTABILITY:")
-		b.Puts("  " + v.selected.tagMutability)
-		b.Puts("CREATED AT:")
-		b.Puts("  " + v.selected.createdAtStr())
-	}
-}
-
-type imageDetailView struct {
-	box      *goban.Box
-	selected *image
-}
-
-func (v *imageDetailView) update(i *image) {
-	v.selected = i
-}
-
-func newImageDetailView(b *goban.Box) *imageDetailView {
-	return &imageDetailView{b, nil}
-}
-
-func (v *imageDetailView) View() {
-	b := v.box.Enclose("DETAIL")
-	if v.selected != nil {
-		b.Puts("TAGS:")
-		for _, t := range v.selected.getTags() {
-			b.Puts("  " + t)
-		}
-		b.Puts("PUSHED AT:")
-		b.Puts("  " + v.selected.pushedAtStr())
-		b.Puts("DIGEST:")
-		b.Puts("  " + v.selected.digest)
-		b.Puts("SIZE:")
-		b.Puts("  " + v.selected.sizeStr())
-		// TODO: show "selected / total count"
-		// TODO: show current repository name
-	}
-}
-
-type image struct {
-	tags     []string
-	pushedAt time.Time
-	digest   string
-	sizeByte int64
-}
-
-func newImage(i *ecr.ImageDetail) *image {
-	return &image{
-		tags:     aws.StringValueSlice(i.ImageTags),
-		pushedAt: aws.TimeValue(i.ImagePushedAt),
-		digest:   aws.StringValue(i.ImageDigest),
-		sizeByte: aws.Int64Value(i.ImageSizeInBytes),
-	}
-}
-
-func (i *image) getTag() string {
-	return strings.Join(i.getTags(), ", ")
-}
-
-func (i *image) getTags() []string {
-	if len(i.tags) == 0 {
-		return []string{"<untagged>"}
-	}
-	return i.tags
-}
-
-func (i *image) pushedAtStr() string {
-	// TODO: consider timezone
-	return i.pushedAt.Format(datetimeFormat)
-}
-
-func (i *image) sizeStr() string {
-	return humanize.Bytes(uint64(i.sizeByte))
 }
 
 type imageListView struct {
@@ -261,7 +157,7 @@ func (v *imageListView) View() {
 		}
 		b.Puts(img.getTag())
 	}
-	createFooter(v.box, v).Print(countStr(v))
+	createFooter(v.box, v).Print(currentCountStr(v))
 }
 
 func (v *imageListView) length() int {
@@ -320,29 +216,6 @@ type imageObserver interface {
 	update(i *image)
 }
 
-type repository struct {
-	name          string
-	uri           string
-	arn           string
-	tagMutability string
-	createdAt     time.Time
-}
-
-func newRepository(r *ecr.Repository) *repository {
-	return &repository{
-		name:          aws.StringValue(r.RepositoryName),
-		uri:           aws.StringValue(r.RepositoryUri),
-		arn:           aws.StringValue(r.RepositoryArn),
-		tagMutability: aws.StringValue(r.ImageTagMutability),
-		createdAt:     aws.TimeValue(r.CreatedAt),
-	}
-}
-
-func (r *repository) createdAtStr() string {
-	// TODO: consider timezone
-	return r.createdAt.Format(datetimeFormat)
-}
-
 type repositoryListView struct {
 	cur          int
 	box          *goban.Box
@@ -373,7 +246,7 @@ func (v *repositoryListView) View() {
 		}
 		b.Puts(r.name)
 	}
-	createFooter(v.box, v).Print(countStr(v))
+	createFooter(v.box, v).Print(currentCountStr(v))
 }
 
 func (v *repositoryListView) length() int {
@@ -399,15 +272,17 @@ type cursorer interface {
 }
 
 func calcCountStrMaxLen(c cursorer) int {
-	l := c.length()
-	n := len(strconv.Itoa(l))
-	return len(fmt.Sprintf(countFormat, n, l, n, l))
+	return len(countStr(c, c.length()))
 }
 
-func countStr(c cursorer) string {
+func currentCountStr(c cursorer) string {
+	return countStr(c, c.cursor()+1)
+}
+
+func countStr(c cursorer, n int) string {
 	l := c.length()
-	n := len(strconv.Itoa(l))
-	return fmt.Sprintf(countFormat, n, c.cursor()+1, n, l)
+	d := len(strconv.Itoa(l))
+	return fmt.Sprintf(countFormat, d, n, d, l)
 }
 
 func (v *repositoryListView) selectNext() {
