@@ -123,3 +123,32 @@ func (v *repositoryListView) addObserver(o repositoryObserver) {
 	v.observers = append(v.observers, o)
 	o.update(v.current())
 }
+
+type repositoryDetailView struct {
+	box      *goban.Box
+	selected *repository
+}
+
+func newRepositoryDetailView(b *goban.Box) *repositoryDetailView {
+	return &repositoryDetailView{b, nil}
+}
+
+func (v *repositoryDetailView) update(r *repository) {
+	v.selected = r
+}
+
+func (v *repositoryDetailView) View() {
+	b := v.box.Enclose("DETAIL")
+	if v.selected != nil {
+		b.Puts("NAME:")
+		b.Puts("  " + v.selected.name)
+		b.Puts("URI:")
+		b.Puts("  " + v.selected.uri)
+		b.Puts("ARN:")
+		b.Puts("  " + v.selected.arn)
+		b.Puts("TAG MUTABILITY:")
+		b.Puts("  " + v.selected.tagMutability)
+		b.Puts("CREATED AT:")
+		b.Puts("  " + v.selected.createdAtStr())
+	}
+}

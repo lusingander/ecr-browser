@@ -133,3 +133,33 @@ func (v *imageListView) addObserver(o imageObserver) {
 	v.observers = append(v.observers, o)
 	o.update(v.current())
 }
+
+type imageDetailView struct {
+	box      *goban.Box
+	selected *image
+}
+
+func newImageDetailView(b *goban.Box) *imageDetailView {
+	return &imageDetailView{b, nil}
+}
+
+func (v *imageDetailView) update(i *image) {
+	v.selected = i
+}
+
+func (v *imageDetailView) View() {
+	b := v.box.Enclose("DETAIL")
+	if v.selected != nil {
+		b.Puts("TAGS:")
+		for _, t := range v.selected.getTags() {
+			b.Puts("  " + t)
+		}
+		b.Puts("PUSHED AT:")
+		b.Puts("  " + v.selected.pushedAtStr())
+		b.Puts("DIGEST:")
+		b.Puts("  " + v.selected.digest)
+		b.Puts("SIZE:")
+		b.Puts("  " + v.selected.sizeStr())
+		// TODO: show current repository name
+	}
+}

@@ -140,3 +140,7 @@ type listView interface {
 	selectFirst()
 	selectLast()
 }
+
+type detailView interface {
+	goban.View
+}
