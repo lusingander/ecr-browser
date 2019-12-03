@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -185,6 +186,7 @@ func (v *imageDetailView) View() {
 		b.Puts("SIZE:")
 		b.Puts("  " + v.selected.sizeStr())
 		// TODO: show "selected / total count"
+		// TODO: show current repository name
 	}
 }
 
@@ -204,8 +206,8 @@ func newImage(i *ecr.ImageDetail) *image {
 	}
 }
 
-func (i *image) getFirstTag() string {
-	return i.getTags()[0]
+func (i *image) getTag() string {
+	return strings.Join(i.getTags(), ", ")
 }
 
 func (i *image) getTags() []string {
@@ -250,7 +252,7 @@ func (v *imageListView) View() {
 		} else {
 			b.Print("  ")
 		}
-		b.Puts(img.getFirstTag())
+		b.Puts(img.getTag())
 	}
 }
 
