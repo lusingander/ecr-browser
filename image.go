@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/dustin/go-humanize"
+	"github.com/eihigh/goban"
 )
 
 type image struct {
@@ -43,4 +44,92 @@ func (i *image) pushedAtStr() string {
 
 func (i *image) sizeStr() string {
 	return humanize.Bytes(uint64(i.sizeByte))
+}
+
+type imageObserver interface {
+	update(i *image)
+}
+
+type imageListView struct {
+	cur       int
+	box       *goban.Box
+	images    []*image
+	observers []imageObserver
+}
+
+func newImageListView(b *goban.Box, svc *ecr.ECR, repoName string) (*imageListView, error) {
+	imgs, err := fetchImages(svc, repoName)
+	if err != nil {
+		return nil, err
+	}
+	return &imageListView{
+		box:    b,
+		images: imgs,
+	}, nil
+}
+
+func (v *imageListView) View() {
+	// TODO: scroll / paging
+	b := v.box.Enclose("IMAGE LIST")
+	for i, img := range v.images {
+		if v.cur == i {
+			b.Print("> ")
+		} else {
+			b.Print("  ")
+		}
+		b.Puts(img.getTag())
+	}
+	createFooter(v.box, v).Print(currentCountStr(v))
+}
+
+func (v *imageListView) length() int {
+	return len(v.images)
+}
+
+func (v *imageListView) cursor() int {
+	return v.cur
+}
+
+func (v *imageListView) selectNext() {
+	if v.cur < len(v.images)-1 {
+		v.cur++
+		v.notify()
+	}
+}
+
+func (v *imageListView) selectPrev() {
+	if v.cur > 0 {
+		v.cur--
+		v.notify()
+	}
+}
+
+func (v *imageListView) selectFirst() {
+	if v.cur > 0 {
+		v.cur = 0
+		v.notify()
+	}
+}
+
+func (v *imageListView) selectLast() {
+	if v.cur < len(v.images)-1 {
+		v.cur = len(v.images) - 1
+		v.notify()
+	}
+}
+
+func (v *imageListView) notify() {
+	current := v.current()
+	for _, o := range v.observers {
+		o.update(current)
+	}
+}
+
+func (v *imageListView) current() *image {
+	return v.images[v.cur]
+}
+
+func (v *imageListView) addObserver(o imageObserver) {
+	v.observers = append(v.observers, o)
+	o.update(v.current())
 }
