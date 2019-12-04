@@ -51,10 +51,11 @@ type imageObserver interface {
 }
 
 type imageListView struct {
-	cur       int
-	box       *goban.Box
-	images    []*image
-	observers []imageObserver
+	cur        int
+	box        *goban.Box
+	images     []*image
+	observers  []imageObserver
+	repository string
 }
 
 func newImageListView(b *goban.Box, svc *ecr.ECR, repoName string) (*imageListView, error) {
@@ -63,8 +64,9 @@ func newImageListView(b *goban.Box, svc *ecr.ECR, repoName string) (*imageListVi
 		return nil, err
 	}
 	return &imageListView{
-		box:    b,
-		images: imgs,
+		box:        b,
+		images:     imgs,
+		repository: repoName,
 	}, nil
 }
 

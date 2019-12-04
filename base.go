@@ -48,6 +48,17 @@ func newRepositoryDefaultView(g *gridLayout, svc *ecr.ECR) (listView, detailView
 
 func (v *baseView) View() {
 	v.base.Enclose("ECR BROWSER")
+	v.printBreadcrumb()
+}
+
+func (v *baseView) printBreadcrumb() {
+	repo, ok := v.getParentRepositoryName()
+	bc := goban.NewBox(v.base.Pos.X+2, v.base.Pos.Y+1, v.base.Size.X-2, 1)
+	if ok {
+		bc.Puts("> " + repo)
+	} else {
+		bc.Puts("> ")
+	}
 }
 
 func (v *baseView) displayRepositoryView() {
@@ -80,11 +91,19 @@ func newImageDefaultView(g *gridLayout, svc *ecr.ECR, repo string) (listView, de
 }
 
 func (v *baseView) getCurrentRepositoryName() (name string, ok bool) {
-	rlv, ok := v.currentListView.(*repositoryListView)
+	lv, ok := v.currentListView.(*repositoryListView)
 	if !ok {
 		return "", false
 	}
-	return rlv.currentRepositoryName(), true
+	return lv.currentRepositoryName(), true
+}
+
+func (v *baseView) getParentRepositoryName() (name string, ok bool) {
+	lv, ok := v.currentListView.(*imageListView)
+	if !ok {
+		return "", false
+	}
+	return lv.repository, true
 }
 
 func (v *baseView) updateBaseViews(newLv listView, newDv detailView) {
