@@ -19,7 +19,7 @@ type baseView struct {
 
 func newBaseView(svc *ecr.ECR) (*baseView, error) {
 	b := goban.Screen()
-	g := createGrid(b.InsideSides(1, 1, 1, 1))
+	g := createGrid(insideSides(b, 1, 2, 1, 1))
 	lv, dv, err := newRepositoryDefaultView(g, svc)
 	if err != nil {
 		return nil, err
