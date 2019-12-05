@@ -58,7 +58,7 @@ func (v *baseView) View() {
 
 func (v *baseView) printBreadcrumb() {
 	repo, ok := v.getParentRepositoryName()
-	bc := goban.NewBox(v.base.Pos.X+2, v.base.Pos.Y+1, v.base.Size.X-2, 1)
+	bc := goban.NewBox(v.base.Pos.X+2, v.base.Pos.Y+1, v.base.Size.X-3, 1)
 	if ok {
 		bc.Puts(breadcrumbBase + " > " + repo)
 	} else {
