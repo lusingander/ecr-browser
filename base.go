@@ -8,6 +8,11 @@ import (
 	"github.com/eihigh/goban"
 )
 
+const (
+	mainViewTitle  = "ECR BROWSER"
+	breadcrumbBase = "ECR > REPOSITORIES"
+)
+
 type baseView struct {
 	base *goban.Box
 	*gridLayout
@@ -47,7 +52,7 @@ func newRepositoryDefaultView(g *gridLayout, svc *ecr.ECR) (listView, detailView
 }
 
 func (v *baseView) View() {
-	v.base.Enclose("ECR BROWSER")
+	v.base.Enclose(mainViewTitle)
 	v.printBreadcrumb()
 }
 
@@ -55,9 +60,9 @@ func (v *baseView) printBreadcrumb() {
 	repo, ok := v.getParentRepositoryName()
 	bc := goban.NewBox(v.base.Pos.X+2, v.base.Pos.Y+1, v.base.Size.X-2, 1)
 	if ok {
-		bc.Puts("> " + repo)
+		bc.Puts(breadcrumbBase + " > " + repo)
 	} else {
-		bc.Puts("> ")
+		bc.Puts(breadcrumbBase)
 	}
 }
 
