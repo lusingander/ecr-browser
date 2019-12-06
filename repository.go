@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sort"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -31,6 +32,14 @@ func (r *repository) createdAtStr() string {
 	return r.createdAt.Format(datetimeFormat)
 }
 
+func repositorySorter(repos []*repository) func(int, int) bool {
+	return func(i, j int) bool { return repos[i].name < repos[j].name }
+}
+
+func sortRepositories(repos []*repository) {
+	sort.Slice(repos, repositorySorter(repos))
+}
+
 type repositoryObserver interface {
 	update(r *repository)
 }
@@ -47,7 +56,7 @@ func newRepositoryListView(b *goban.Box, svc *ecr.ECR) (*repositoryListView, err
 	if err != nil {
 		return nil, err
 	}
-	// TODO: sort
+	sortRepositories(repos)
 	return &repositoryListView{
 		box:          b,
 		repositories: repos,
