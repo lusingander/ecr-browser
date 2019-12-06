@@ -51,6 +51,10 @@ func imageSorter(imgs []*image) func(int, int) bool {
 	return func(i, j int) bool { return imgs[i].pushedAt.After(imgs[j].pushedAt) }
 }
 
+func sortImages(imgs []*image) {
+	sort.Slice(imgs, imageSorter(imgs))
+}
+
 type imageObserver interface {
 	update(i *image)
 }
@@ -68,7 +72,7 @@ func newImageListView(b *goban.Box, svc *ecr.ECR, repoName string) (*imageListVi
 	if err != nil {
 		return nil, err
 	}
-	sort.Slice(imgs, imageSorter(imgs))
+	sortImages(imgs)
 	return &imageListView{
 		box:        b,
 		images:     imgs,
