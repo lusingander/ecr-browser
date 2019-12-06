@@ -41,13 +41,13 @@ func app(_ context.Context, es goban.Events) error {
 		goban.Show()
 		switch es.ReadKey().Rune() {
 		case 'k':
-			bv.currentListView.selectPrev()
+			bv.current.list.selectPrev()
 		case 'j':
-			bv.currentListView.selectNext()
+			bv.current.list.selectNext()
 		case 'g':
-			bv.currentListView.selectFirst()
+			bv.current.list.selectFirst()
 		case 'G':
-			bv.currentListView.selectLast()
+			bv.current.list.selectLast()
 		case 'l':
 			bv.displayImageViews(svc)
 		case 'h':
