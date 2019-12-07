@@ -144,7 +144,7 @@ func createGrid(b *goban.Box) *gridLayout {
 
 type cursorer interface {
 	length() int
-	cursor() int
+	cursor() int // return -1 if length is zero
 }
 
 func createFooter(b *goban.Box, c cursorer) *goban.Box {

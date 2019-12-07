@@ -77,15 +77,25 @@ func (v *repositoryListView) View() {
 	createFooter(v.box, v).Print(currentCountStr(v))
 }
 
+func (v *repositoryListView) empty() bool {
+	return v.repositories == nil || len(v.repositories) == 0
+}
+
 func (v *repositoryListView) length() int {
 	return len(v.repositories)
 }
 
 func (v *repositoryListView) cursor() int {
+	if v.empty() {
+		return -1
+	}
 	return v.cur
 }
 
 func (v *repositoryListView) selectNext() {
+	if v.empty() {
+		return
+	}
 	if v.cur < len(v.repositories)-1 {
 		v.cur++
 		v.notify()
@@ -93,6 +103,9 @@ func (v *repositoryListView) selectNext() {
 }
 
 func (v *repositoryListView) selectPrev() {
+	if v.empty() {
+		return
+	}
 	if v.cur > 0 {
 		v.cur--
 		v.notify()
@@ -100,6 +113,9 @@ func (v *repositoryListView) selectPrev() {
 }
 
 func (v *repositoryListView) selectFirst() {
+	if v.empty() {
+		return
+	}
 	if v.cur > 0 {
 		v.cur = 0
 		v.notify()
@@ -107,6 +123,9 @@ func (v *repositoryListView) selectFirst() {
 }
 
 func (v *repositoryListView) selectLast() {
+	if v.empty() {
+		return
+	}
 	if v.cur < len(v.repositories)-1 {
 		v.cur = len(v.repositories) - 1
 		v.notify()
@@ -121,6 +140,9 @@ func (v *repositoryListView) notify() {
 }
 
 func (v *repositoryListView) current() *repository {
+	if v.empty() {
+		return nil
+	}
 	return v.repositories[v.cur]
 }
 

@@ -94,15 +94,25 @@ func (v *imageListView) View() {
 	createFooter(v.box, v).Print(currentCountStr(v))
 }
 
+func (v *imageListView) empty() bool {
+	return v.images == nil || len(v.images) == 0
+}
+
 func (v *imageListView) length() int {
 	return len(v.images)
 }
 
 func (v *imageListView) cursor() int {
+	if v.empty() {
+		return -1
+	}
 	return v.cur
 }
 
 func (v *imageListView) selectNext() {
+	if v.empty() {
+		return
+	}
 	if v.cur < len(v.images)-1 {
 		v.cur++
 		v.notify()
@@ -110,6 +120,9 @@ func (v *imageListView) selectNext() {
 }
 
 func (v *imageListView) selectPrev() {
+	if v.empty() {
+		return
+	}
 	if v.cur > 0 {
 		v.cur--
 		v.notify()
@@ -117,6 +130,9 @@ func (v *imageListView) selectPrev() {
 }
 
 func (v *imageListView) selectFirst() {
+	if v.empty() {
+		return
+	}
 	if v.cur > 0 {
 		v.cur = 0
 		v.notify()
@@ -124,6 +140,9 @@ func (v *imageListView) selectFirst() {
 }
 
 func (v *imageListView) selectLast() {
+	if v.empty() {
+		return
+	}
 	if v.cur < len(v.images)-1 {
 		v.cur = len(v.images) - 1
 		v.notify()
@@ -138,6 +157,9 @@ func (v *imageListView) notify() {
 }
 
 func (v *imageListView) current() *image {
+	if v.empty() {
+		return nil
+	}
 	return v.images[v.cur]
 }
 
@@ -172,6 +194,5 @@ func (v *imageDetailView) View() {
 		b.Puts("  " + v.selected.digest)
 		b.Puts("SIZE:")
 		b.Puts("  " + v.selected.sizeStr())
-		// TODO: show current repository name
 	}
 }
