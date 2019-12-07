@@ -66,6 +66,7 @@ func (v *listViewBase) View() {
 			break
 		}
 	}
+	v.printScroll()
 	v.createFooter().Print(v.currentCountStr())
 }
 
@@ -194,4 +195,26 @@ func (v *listViewBase) countStr(n int) string {
 	l := v.length()
 	d := len(strconv.Itoa(l))
 	return fmt.Sprintf(countFormat, d, n, d, l)
+}
+
+func (v *listViewBase) printScroll() {
+	if len(v.elements) < v.height() {
+		return
+	}
+	b := v.box
+	barLength := v.height() * v.height() / len(v.elements)
+	x := b.Pos.X + b.Size.X - 2
+	y := b.Pos.Y + 1 + v.calcScrollTopPos(barLength)
+	w := 1
+	s := goban.NewBox(x, y, w, barLength)
+	for i := 0; i < barLength; i++ {
+		s.Puts("│") // ║ (2551) or │ (2503)
+	}
+}
+
+func (v *listViewBase) calcScrollTopPos(barLength int) int {
+	barMaxMove := float64(v.height() - barLength)
+	viewTopMaxMove := float64(len(v.elements) - v.height())
+	currentViewTop := float64(v.viewTop)
+	return int((currentViewTop / viewTopMaxMove) * barMaxMove)
 }
