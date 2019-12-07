@@ -35,49 +35,21 @@ func (b *breadcrumb) View() {
 	goban.NewBox(b.x, b.y, b.w, 1).Puts(strings.Join(b.elements, breadcrumbSep))
 }
 
-type cursorer interface {
-	length() int
-	cursor() int // return -1 if length is zero
-}
-
-func createFooter(b *goban.Box, c cursorer) *goban.Box {
-	l := calcCountStrMaxLen(c)
-	h := 1
-	y := b.Pos.Y + b.Size.Y - h
-	x := b.Pos.X + b.Size.X - l - 1 // right justify
-	w := l
-	return goban.NewBox(x, y, w, h)
-}
-
-func calcCountStrMaxLen(c cursorer) int {
-	return len(countStr(c, c.length()))
-}
-
-func currentCountStr(c cursorer) string {
-	return countStr(c, c.cursor()+1)
-}
-
-func countStr(c cursorer, n int) string {
-	l := c.length()
-	d := len(strconv.Itoa(l))
-	return fmt.Sprintf(countFormat, d, n, d, l)
-}
-
-type listView interface {
-	goban.View
-	selectNext()
-	selectPrev()
-	selectFirst()
-	selectLast()
-}
-
 type listViewBase struct {
 	cur       int
 	box       *goban.Box
-	viewTop   int
 	elements  []listViewElement
-	title     string
 	observers []listElementObserver
+	title     string
+	viewTop   int
+}
+
+type listViewElement interface {
+	display() string
+}
+
+type listElementObserver interface {
+	update(e listViewElement)
 }
 
 func (v *listViewBase) View() {
@@ -94,7 +66,7 @@ func (v *listViewBase) View() {
 			break
 		}
 	}
-	createFooter(v.box, v).Print(currentCountStr(v))
+	v.createFooter().Print(v.currentCountStr())
 }
 
 func (v *listViewBase) get(i int) (listViewElement, bool) {
@@ -200,14 +172,26 @@ func (v *listViewBase) notify() {
 	}
 }
 
-type listViewElement interface {
-	display() string
+func (v *listViewBase) createFooter() *goban.Box {
+	b := v.box
+	l := v.calcCountStrMaxLen()
+	h := 1
+	y := b.Pos.Y + b.Size.Y - h
+	x := b.Pos.X + b.Size.X - l - 1 // right justify
+	w := l
+	return goban.NewBox(x, y, w, h)
 }
 
-type listElementObserver interface {
-	update(e listViewElement)
+func (v *listViewBase) calcCountStrMaxLen() int {
+	return len(v.countStr(v.length()))
 }
 
-type detailView interface {
-	goban.View
+func (v *listViewBase) currentCountStr() string {
+	return v.countStr(v.cursor() + 1)
+}
+
+func (v *listViewBase) countStr(n int) string {
+	l := v.length()
+	d := len(strconv.Itoa(l))
+	return fmt.Sprintf(countFormat, d, n, d, l)
 }

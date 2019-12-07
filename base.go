@@ -151,3 +151,15 @@ func createGrid(b *goban.Box) *gridLayout {
 	detail := b.GridItem(grid, gridAreaDetail)
 	return &gridLayout{list, detail}
 }
+
+type listView interface {
+	goban.View
+	selectNext()
+	selectPrev()
+	selectFirst()
+	selectLast()
+}
+
+type detailView interface {
+	goban.View
+}

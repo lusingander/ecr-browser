@@ -9,6 +9,10 @@ import (
 	"github.com/eihigh/goban"
 )
 
+const (
+	repositoryListViewTitle = "REPOSITORIES"
+)
+
 type repository struct {
 	name          string
 	uri           string
@@ -58,7 +62,7 @@ func newRepositoryListView(b *goban.Box, svc *ecr.ECR) (*repositoryListView, err
 		listViewBase: &listViewBase{
 			box:      b,
 			elements: listViewElementsFromRepositories(repos),
-			title:    "REPOSITORIES",
+			title:    repositoryListViewTitle,
 		},
 	}, nil
 }

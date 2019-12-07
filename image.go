@@ -11,6 +11,11 @@ import (
 	"github.com/eihigh/goban"
 )
 
+const (
+	imageListViewTitle = "IMAGES"
+	noTag              = "<untagged>"
+)
+
 type image struct {
 	tags     []string
 	pushedAt time.Time
@@ -37,7 +42,7 @@ func (i *image) getTag() string {
 
 func (i *image) getTags() []string {
 	if len(i.tags) == 0 {
-		return []string{"<untagged>"}
+		return []string{noTag}
 	}
 	return i.tags
 }
@@ -74,7 +79,7 @@ func newImageListView(b *goban.Box, svc *ecr.ECR, repoName string) (*imageListVi
 		listViewBase: &listViewBase{
 			box:      b,
 			elements: listViewElementsFromImages(imgs),
-			title:    "IMAGES",
+			title:    imageListViewTitle,
 		},
 		repository: repoName,
 	}, nil
