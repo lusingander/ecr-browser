@@ -9,12 +9,16 @@ import (
 )
 
 const (
-	mainViewTitle  = "ECR BROWSER"
-	breadcrumbBase = "ECR > REPOSITORIES"
+	mainViewTitle = "ECR BROWSER"
+)
+
+var (
+	breadcrumbBases = []string{"ECR", "REPOSITORIES"}
 )
 
 type baseView struct {
 	base *goban.Box
+	*breadcrumb
 	*gridLayout
 	current *defaultView
 	repo    *defaultView
@@ -35,14 +39,16 @@ func newBaseView(svc *ecr.ECR) (*baseView, error) {
 	if err != nil {
 		return nil, err
 	}
+	bc := newECRBreadcrumb(b.Pos.X+2, b.Pos.Y+1, b.Size.X-3)
 	bv := &baseView{
 		base:       b,
+		breadcrumb: bc,
 		gridLayout: g,
 		current:    dv,
 		repo:       dv,
 		images:     make(cacheMap),
 	}
-	pushViews(bv, dv.list, dv.detail)
+	pushViews(bv, bc, dv.list, dv.detail)
 	return bv, nil
 }
 
@@ -58,22 +64,28 @@ func newRepositoryDefaultView(g *gridLayout, svc *ecr.ECR) (*defaultView, error)
 
 func (v *baseView) View() {
 	v.base.Enclose(mainViewTitle)
-	v.printBreadcrumb()
 }
 
-func (v *baseView) printBreadcrumb() {
-	repo, ok := v.getParentRepositoryName()
-	bc := goban.NewBox(v.base.Pos.X+2, v.base.Pos.Y+1, v.base.Size.X-3, 1)
-	if ok {
-		bc.Puts(breadcrumbBase + " > " + repo)
-	} else {
-		bc.Puts(breadcrumbBase)
+func newECRBreadcrumb(x, y, w int) *breadcrumb {
+	b := newBreadcrumb(x, y, w)
+	for _, v := range breadcrumbBases {
+		b.push(v)
 	}
+	return b
+}
+
+func (v *baseView) pushBreadcrumb(s string) {
+	v.breadcrumb.push(s)
+}
+
+func (v *baseView) popBreadcrumb() string {
+	return v.breadcrumb.pop()
 }
 
 func (v *baseView) displayRepositoryView() {
 	if _, ok := v.current.list.(*imageListView); ok {
 		v.updateBaseViews(v.repo)
+		v.popBreadcrumb()
 	}
 }
 
@@ -87,6 +99,7 @@ func (v *baseView) displayImageViews(svc *ecr.ECR) error {
 		return err
 	}
 	v.updateBaseViews(dv)
+	v.pushBreadcrumb(repo)
 	return nil
 }
 

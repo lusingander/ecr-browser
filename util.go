@@ -34,3 +34,7 @@ func insideSides(src *goban.Box, l, t, r, b int) *goban.Box {
 	}
 	return insideSides(tmp, l, t, r, b)
 }
+
+func delete(i int, s []string) []string {
+	return append(s[:i], s[i+1:]...)
+}
