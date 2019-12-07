@@ -60,8 +60,7 @@ type imageObserver interface {
 }
 
 type imageListView struct {
-	cur        int
-	box        *goban.Box
+	*listViewBase
 	images     []*image
 	observers  []imageObserver
 	repository string
@@ -74,9 +73,9 @@ func newImageListView(b *goban.Box, svc *ecr.ECR, repoName string) (*imageListVi
 	}
 	sortImages(imgs)
 	return &imageListView{
-		box:        b,
-		images:     imgs,
-		repository: repoName,
+		listViewBase: &listViewBase{box: b},
+		images:       imgs,
+		repository:   repoName,
 	}, nil
 }
 

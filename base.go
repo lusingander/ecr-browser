@@ -191,6 +191,11 @@ type listView interface {
 	selectLast()
 }
 
+type listViewBase struct {
+	cur int
+	box *goban.Box
+}
+
 type detailView interface {
 	goban.View
 }

@@ -45,8 +45,7 @@ type repositoryObserver interface {
 }
 
 type repositoryListView struct {
-	cur          int
-	box          *goban.Box
+	*listViewBase
 	repositories []*repository
 	observers    []repositoryObserver
 }
@@ -58,7 +57,7 @@ func newRepositoryListView(b *goban.Box, svc *ecr.ECR) (*repositoryListView, err
 	}
 	sortRepositories(repos)
 	return &repositoryListView{
-		box:          b,
+		listViewBase: &listViewBase{box: b},
 		repositories: repos,
 	}, nil
 }
