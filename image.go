@@ -64,6 +64,7 @@ type imageListView struct {
 	images     []*image
 	observers  []imageObserver
 	repository string
+	viewTop    int
 }
 
 func newImageListView(b *goban.Box, svc *ecr.ECR, repoName string) (*imageListView, error) {
@@ -80,17 +81,35 @@ func newImageListView(b *goban.Box, svc *ecr.ECR, repoName string) (*imageListVi
 }
 
 func (v *imageListView) View() {
-	// TODO: scroll / paging
 	b := v.box.Enclose("IMAGE LIST")
-	for i, img := range v.images {
+	for i := 0; i < v.height(); i++ {
 		if v.cur == i {
 			b.Print("> ")
 		} else {
 			b.Print("  ")
 		}
-		b.Puts(img.getTag())
+		if img, ok := v.get(i + v.viewTop); ok {
+			b.Puts(img.getTag())
+		} else {
+			break
+		}
 	}
 	createFooter(v.box, v).Print(currentCountStr(v))
+}
+
+func (v *imageListView) get(i int) (*image, bool) {
+	if i >= len(v.images) {
+		return nil, false
+	}
+	return v.images[i], true
+}
+
+func (v *imageListView) height() int {
+	h := v.box.Size.Y - 2
+	if len(v.images) < h {
+		return len(v.images)
+	}
+	return h
 }
 
 func (v *imageListView) empty() bool {
@@ -105,17 +124,29 @@ func (v *imageListView) cursor() int {
 	if v.empty() {
 		return -1
 	}
-	return v.cur
+	return v.cur + v.viewTop
+}
+
+func (v *imageListView) cursorExistFirst() bool {
+	return v.cursor() == 0
+}
+
+func (v *imageListView) cursorExistLast() bool {
+	return v.cursor() == len(v.images)-1
 }
 
 func (v *imageListView) selectNext() {
 	if v.empty() {
 		return
 	}
-	if v.cur < len(v.images)-1 {
+	if v.cur < v.height()-1 {
 		v.cur++
-		v.notify()
+	} else {
+		if !v.cursorExistLast() {
+			v.viewTop++
+		}
 	}
+	v.notify()
 }
 
 func (v *imageListView) selectPrev() {
@@ -124,28 +155,30 @@ func (v *imageListView) selectPrev() {
 	}
 	if v.cur > 0 {
 		v.cur--
-		v.notify()
+	} else {
+		if !v.cursorExistFirst() {
+			v.viewTop--
+		}
 	}
+	v.notify()
 }
 
 func (v *imageListView) selectFirst() {
 	if v.empty() {
 		return
 	}
-	if v.cur > 0 {
-		v.cur = 0
-		v.notify()
-	}
+	v.cur = 0
+	v.viewTop = 0
+	v.notify()
 }
 
 func (v *imageListView) selectLast() {
 	if v.empty() {
 		return
 	}
-	if v.cur < len(v.images)-1 {
-		v.cur = len(v.images) - 1
-		v.notify()
-	}
+	v.cur = v.height() - 1
+	v.viewTop = len(v.images) - v.height()
+	v.notify()
 }
 
 func (v *imageListView) notify() {
@@ -159,7 +192,7 @@ func (v *imageListView) current() *image {
 	if v.empty() {
 		return nil
 	}
-	return v.images[v.cur]
+	return v.images[v.cursor()]
 }
 
 func (v *imageListView) addObserver(o imageObserver) {
