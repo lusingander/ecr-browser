@@ -64,7 +64,6 @@ type imageListView struct {
 	images     []*image
 	observers  []imageObserver
 	repository string
-	viewTop    int
 }
 
 func newImageListView(b *goban.Box, svc *ecr.ECR, repoName string) (*imageListView, error) {

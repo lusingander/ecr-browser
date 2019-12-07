@@ -192,8 +192,9 @@ type listView interface {
 }
 
 type listViewBase struct {
-	cur int
-	box *goban.Box
+	cur     int
+	box     *goban.Box
+	viewTop int
 }
 
 type detailView interface {

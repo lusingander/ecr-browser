@@ -63,17 +63,35 @@ func newRepositoryListView(b *goban.Box, svc *ecr.ECR) (*repositoryListView, err
 }
 
 func (v *repositoryListView) View() {
-	// TODO: scroll / paging
 	b := v.box.Enclose("REPOSITORY LIST")
-	for i, r := range v.repositories {
-		if v.cursor() == i {
+	for i := 0; i < v.height(); i++ {
+		if v.cur == i {
 			b.Print("> ")
 		} else {
 			b.Print("  ")
 		}
-		b.Puts(r.name)
+		if r, ok := v.get(i + v.viewTop); ok {
+			b.Puts(r.name)
+		} else {
+			break
+		}
 	}
 	createFooter(v.box, v).Print(currentCountStr(v))
+}
+
+func (v *repositoryListView) get(i int) (*repository, bool) {
+	if i >= len(v.repositories) {
+		return nil, false
+	}
+	return v.repositories[i], true
+}
+
+func (v *repositoryListView) height() int {
+	h := v.box.Size.Y - 2
+	if len(v.repositories) < h {
+		return len(v.repositories)
+	}
+	return h
 }
 
 func (v *repositoryListView) empty() bool {
@@ -88,17 +106,29 @@ func (v *repositoryListView) cursor() int {
 	if v.empty() {
 		return -1
 	}
-	return v.cur
+	return v.cur + v.viewTop
+}
+
+func (v *repositoryListView) cursorExistFirst() bool {
+	return v.cursor() == 0
+}
+
+func (v *repositoryListView) cursorExistLast() bool {
+	return v.cursor() == len(v.repositories)-1
 }
 
 func (v *repositoryListView) selectNext() {
 	if v.empty() {
 		return
 	}
-	if v.cur < len(v.repositories)-1 {
+	if v.cur < v.height()-1 {
 		v.cur++
-		v.notify()
+	} else {
+		if !v.cursorExistLast() {
+			v.viewTop++
+		}
 	}
+	v.notify()
 }
 
 func (v *repositoryListView) selectPrev() {
@@ -107,28 +137,30 @@ func (v *repositoryListView) selectPrev() {
 	}
 	if v.cur > 0 {
 		v.cur--
-		v.notify()
+	} else {
+		if !v.cursorExistFirst() {
+			v.viewTop--
+		}
 	}
+	v.notify()
 }
 
 func (v *repositoryListView) selectFirst() {
 	if v.empty() {
 		return
 	}
-	if v.cur > 0 {
-		v.cur = 0
-		v.notify()
-	}
+	v.cur = 0
+	v.viewTop = 0
+	v.notify()
 }
 
 func (v *repositoryListView) selectLast() {
 	if v.empty() {
 		return
 	}
-	if v.cur < len(v.repositories)-1 {
-		v.cur = len(v.repositories) - 1
-		v.notify()
-	}
+	v.cur = v.height() - 1
+	v.viewTop = len(v.repositories) - v.height()
+	v.notify()
 }
 
 func (v *repositoryListView) notify() {
@@ -142,7 +174,7 @@ func (v *repositoryListView) current() *repository {
 	if v.empty() {
 		return nil
 	}
-	return v.repositories[v.cur]
+	return v.repositories[v.cursor()]
 }
 
 func (v *repositoryListView) currentRepositoryName() string {
