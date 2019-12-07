@@ -94,7 +94,7 @@ func (v *baseView) displayImageViews(svc *ecr.ECR) error {
 	if !ok {
 		return nil
 	}
-	dv, err := v.newImageDefaultView(v.gridLayout, svc, repo)
+	dv, err := v.loadImageDefaultView(v.gridLayout, svc, repo)
 	if err != nil {
 		return err
 	}
