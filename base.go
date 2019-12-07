@@ -1,9 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/eihigh/goban"
 )
@@ -153,50 +150,4 @@ func createGrid(b *goban.Box) *gridLayout {
 	list := b.GridItem(grid, gridAreaList)
 	detail := b.GridItem(grid, gridAreaDetail)
 	return &gridLayout{list, detail}
-}
-
-type cursorer interface {
-	length() int
-	cursor() int // return -1 if length is zero
-}
-
-func createFooter(b *goban.Box, c cursorer) *goban.Box {
-	l := calcCountStrMaxLen(c)
-	h := 1
-	y := b.Pos.Y + b.Size.Y - h
-	x := b.Pos.X + b.Size.X - l - 1 // right justify
-	w := l
-	return goban.NewBox(x, y, w, h)
-}
-
-func calcCountStrMaxLen(c cursorer) int {
-	return len(countStr(c, c.length()))
-}
-
-func currentCountStr(c cursorer) string {
-	return countStr(c, c.cursor()+1)
-}
-
-func countStr(c cursorer, n int) string {
-	l := c.length()
-	d := len(strconv.Itoa(l))
-	return fmt.Sprintf(countFormat, d, n, d, l)
-}
-
-type listView interface {
-	goban.View
-	selectNext()
-	selectPrev()
-	selectFirst()
-	selectLast()
-}
-
-type listViewBase struct {
-	cur     int
-	box     *goban.Box
-	viewTop int
-}
-
-type detailView interface {
-	goban.View
 }

@@ -27,6 +27,10 @@ func newImage(i *ecr.ImageDetail) *image {
 	}
 }
 
+func (i *image) display() string {
+	return i.getTag()
+}
+
 func (i *image) getTag() string {
 	return strings.Join(i.getTags(), ", ")
 }
@@ -55,14 +59,8 @@ func sortImages(imgs []*image) {
 	sort.Slice(imgs, imageSorter(imgs))
 }
 
-type imageObserver interface {
-	update(i *image)
-}
-
 type imageListView struct {
 	*listViewBase
-	images     []*image
-	observers  []imageObserver
 	repository string
 }
 
@@ -73,130 +71,21 @@ func newImageListView(b *goban.Box, svc *ecr.ECR, repoName string) (*imageListVi
 	}
 	sortImages(imgs)
 	return &imageListView{
-		listViewBase: &listViewBase{box: b},
-		images:       imgs,
-		repository:   repoName,
+		listViewBase: &listViewBase{
+			box:      b,
+			elements: listViewElementsFromImages(imgs),
+			title:    "IMAGES",
+		},
+		repository: repoName,
 	}, nil
 }
 
-func (v *imageListView) View() {
-	b := v.box.Enclose("IMAGE LIST")
-	for i := 0; i < v.height(); i++ {
-		if v.cur == i {
-			b.Print("> ")
-		} else {
-			b.Print("  ")
-		}
-		if img, ok := v.get(i + v.viewTop); ok {
-			b.Puts(img.getTag())
-		} else {
-			break
-		}
+func listViewElementsFromImages(imgs []*image) []listViewElement {
+	var elems []listViewElement
+	for _, img := range imgs {
+		elems = append(elems, img)
 	}
-	createFooter(v.box, v).Print(currentCountStr(v))
-}
-
-func (v *imageListView) get(i int) (*image, bool) {
-	if i >= len(v.images) {
-		return nil, false
-	}
-	return v.images[i], true
-}
-
-func (v *imageListView) height() int {
-	h := v.box.Size.Y - 2
-	if len(v.images) < h {
-		return len(v.images)
-	}
-	return h
-}
-
-func (v *imageListView) empty() bool {
-	return v.images == nil || len(v.images) == 0
-}
-
-func (v *imageListView) length() int {
-	return len(v.images)
-}
-
-func (v *imageListView) cursor() int {
-	if v.empty() {
-		return -1
-	}
-	return v.cur + v.viewTop
-}
-
-func (v *imageListView) cursorExistFirst() bool {
-	return v.cursor() == 0
-}
-
-func (v *imageListView) cursorExistLast() bool {
-	return v.cursor() == len(v.images)-1
-}
-
-func (v *imageListView) selectNext() {
-	if v.empty() {
-		return
-	}
-	if v.cur < v.height()-1 {
-		v.cur++
-	} else {
-		if !v.cursorExistLast() {
-			v.viewTop++
-		}
-	}
-	v.notify()
-}
-
-func (v *imageListView) selectPrev() {
-	if v.empty() {
-		return
-	}
-	if v.cur > 0 {
-		v.cur--
-	} else {
-		if !v.cursorExistFirst() {
-			v.viewTop--
-		}
-	}
-	v.notify()
-}
-
-func (v *imageListView) selectFirst() {
-	if v.empty() {
-		return
-	}
-	v.cur = 0
-	v.viewTop = 0
-	v.notify()
-}
-
-func (v *imageListView) selectLast() {
-	if v.empty() {
-		return
-	}
-	v.cur = v.height() - 1
-	v.viewTop = len(v.images) - v.height()
-	v.notify()
-}
-
-func (v *imageListView) notify() {
-	current := v.current()
-	for _, o := range v.observers {
-		o.update(current)
-	}
-}
-
-func (v *imageListView) current() *image {
-	if v.empty() {
-		return nil
-	}
-	return v.images[v.cursor()]
-}
-
-func (v *imageListView) addObserver(o imageObserver) {
-	v.observers = append(v.observers, o)
-	o.update(v.current())
+	return elems
 }
 
 type imageDetailView struct {
@@ -208,8 +97,10 @@ func newImageDetailView(b *goban.Box) *imageDetailView {
 	return &imageDetailView{b, nil}
 }
 
-func (v *imageDetailView) update(i *image) {
-	v.selected = i
+func (v *imageDetailView) update(e listViewElement) {
+	if img, ok := e.(*image); ok {
+		v.selected = img
+	}
 }
 
 func (v *imageDetailView) View() {

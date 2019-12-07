@@ -27,6 +27,10 @@ func newRepository(r *ecr.Repository) *repository {
 	}
 }
 
+func (r *repository) display() string {
+	return r.name
+}
+
 func (r *repository) createdAtStr() string {
 	// TODO: consider timezone
 	return r.createdAt.Format(datetimeFormat)
@@ -40,14 +44,8 @@ func sortRepositories(repos []*repository) {
 	sort.Slice(repos, repositorySorter(repos))
 }
 
-type repositoryObserver interface {
-	update(r *repository)
-}
-
 type repositoryListView struct {
 	*listViewBase
-	repositories []*repository
-	observers    []repositoryObserver
 }
 
 func newRepositoryListView(b *goban.Box, svc *ecr.ECR) (*repositoryListView, error) {
@@ -57,133 +55,27 @@ func newRepositoryListView(b *goban.Box, svc *ecr.ECR) (*repositoryListView, err
 	}
 	sortRepositories(repos)
 	return &repositoryListView{
-		listViewBase: &listViewBase{box: b},
-		repositories: repos,
+		listViewBase: &listViewBase{
+			box:      b,
+			elements: listViewElementsFromRepositories(repos),
+			title:    "REPOSITORIES",
+		},
 	}, nil
 }
 
-func (v *repositoryListView) View() {
-	b := v.box.Enclose("REPOSITORY LIST")
-	for i := 0; i < v.height(); i++ {
-		if v.cur == i {
-			b.Print("> ")
-		} else {
-			b.Print("  ")
-		}
-		if r, ok := v.get(i + v.viewTop); ok {
-			b.Puts(r.name)
-		} else {
-			break
-		}
+func listViewElementsFromRepositories(repos []*repository) []listViewElement {
+	var elems []listViewElement
+	for _, repo := range repos {
+		elems = append(elems, repo)
 	}
-	createFooter(v.box, v).Print(currentCountStr(v))
-}
-
-func (v *repositoryListView) get(i int) (*repository, bool) {
-	if i >= len(v.repositories) {
-		return nil, false
-	}
-	return v.repositories[i], true
-}
-
-func (v *repositoryListView) height() int {
-	h := v.box.Size.Y - 2
-	if len(v.repositories) < h {
-		return len(v.repositories)
-	}
-	return h
-}
-
-func (v *repositoryListView) empty() bool {
-	return v.repositories == nil || len(v.repositories) == 0
-}
-
-func (v *repositoryListView) length() int {
-	return len(v.repositories)
-}
-
-func (v *repositoryListView) cursor() int {
-	if v.empty() {
-		return -1
-	}
-	return v.cur + v.viewTop
-}
-
-func (v *repositoryListView) cursorExistFirst() bool {
-	return v.cursor() == 0
-}
-
-func (v *repositoryListView) cursorExistLast() bool {
-	return v.cursor() == len(v.repositories)-1
-}
-
-func (v *repositoryListView) selectNext() {
-	if v.empty() {
-		return
-	}
-	if v.cur < v.height()-1 {
-		v.cur++
-	} else {
-		if !v.cursorExistLast() {
-			v.viewTop++
-		}
-	}
-	v.notify()
-}
-
-func (v *repositoryListView) selectPrev() {
-	if v.empty() {
-		return
-	}
-	if v.cur > 0 {
-		v.cur--
-	} else {
-		if !v.cursorExistFirst() {
-			v.viewTop--
-		}
-	}
-	v.notify()
-}
-
-func (v *repositoryListView) selectFirst() {
-	if v.empty() {
-		return
-	}
-	v.cur = 0
-	v.viewTop = 0
-	v.notify()
-}
-
-func (v *repositoryListView) selectLast() {
-	if v.empty() {
-		return
-	}
-	v.cur = v.height() - 1
-	v.viewTop = len(v.repositories) - v.height()
-	v.notify()
-}
-
-func (v *repositoryListView) notify() {
-	current := v.current()
-	for _, o := range v.observers {
-		o.update(current)
-	}
-}
-
-func (v *repositoryListView) current() *repository {
-	if v.empty() {
-		return nil
-	}
-	return v.repositories[v.cursor()]
+	return elems
 }
 
 func (v *repositoryListView) currentRepositoryName() string {
-	return v.current().name
-}
-
-func (v *repositoryListView) addObserver(o repositoryObserver) {
-	v.observers = append(v.observers, o)
-	o.update(v.current())
+	if repo, ok := v.current().(*repository); ok {
+		return repo.name
+	}
+	return ""
 }
 
 type repositoryDetailView struct {
@@ -195,8 +87,10 @@ func newRepositoryDetailView(b *goban.Box) *repositoryDetailView {
 	return &repositoryDetailView{b, nil}
 }
 
-func (v *repositoryDetailView) update(r *repository) {
-	v.selected = r
+func (v *repositoryDetailView) update(e listViewElement) {
+	if repo, ok := e.(*repository); ok {
+		v.selected = repo
+	}
 }
 
 func (v *repositoryDetailView) View() {
