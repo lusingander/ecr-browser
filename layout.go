@@ -198,11 +198,12 @@ func (v *listViewBase) countStr(n int) string {
 }
 
 func (v *listViewBase) printScroll() {
-	if len(v.elements) < v.height() {
+	l := len(v.elements)
+	if l == 0 || l < v.height() {
 		return
 	}
 	b := v.box
-	barLength := v.height() * v.height() / len(v.elements)
+	barLength := v.height() * v.height() / l
 	x := b.Pos.X + b.Size.X - 2
 	y := b.Pos.Y + 1 + v.calcScrollTopPos(barLength)
 	w := 1
