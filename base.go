@@ -91,6 +91,11 @@ func (v *baseView) displayImageViews(svc *ecr.ECR) error {
 	if !ok {
 		return nil
 	}
+
+	loading := newLoadingDialog(v.base)
+	go loading.display()
+	defer loading.close()
+
 	dv, err := v.loadImageDefaultView(v.gridLayout, svc, repo)
 	if err != nil {
 		return err

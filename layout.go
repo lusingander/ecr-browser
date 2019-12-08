@@ -219,3 +219,37 @@ func (v *listViewBase) calcScrollTopPos(barLength int) int {
 	currentViewTop := float64(v.viewTop)
 	return int((currentViewTop / viewTopMaxMove) * barMaxMove)
 }
+
+type loadingDialog struct {
+	parent *goban.Box
+	ch     chan bool
+}
+
+func newLoadingDialog(parent *goban.Box) *loadingDialog {
+	return &loadingDialog{parent, make(chan bool)}
+}
+
+func (d *loadingDialog) View() {
+	str := "Now Loading..."
+	dialog := goban.NewBox(0, 0, len(str)+10, 7).CenterOf(d.parent).Enclose("")
+	strArea := goban.NewBox(0, 0, len(str), 1).CenterOf(dialog)
+	strArea.Puts(str)
+}
+
+func (d *loadingDialog) display() {
+	goban.PushView(d)
+	defer goban.RemoveView(d)
+	goban.Show()
+	// should catch es(goban.Events) and process(discard?)
+	<-d.ch
+}
+
+func (d *loadingDialog) close() {
+	d.ch <- true
+}
+
+func (d *loadingDialog) waitFor(f func()) {
+	go d.display()
+	defer d.close()
+	f()
+}
