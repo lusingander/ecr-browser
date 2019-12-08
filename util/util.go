@@ -1,20 +1,20 @@
-package main
+package util
 
 import "github.com/eihigh/goban"
 
-func pushViews(vs ...goban.View) {
+func PushViews(vs ...goban.View) {
 	for _, v := range vs {
 		goban.PushView(v)
 	}
 }
 
-func removeViews(vs ...goban.View) {
+func RemoveViews(vs ...goban.View) {
 	for _, v := range vs {
 		goban.RemoveView(v)
 	}
 }
 
-func insideSides(src *goban.Box, l, t, r, b int) *goban.Box {
+func InsideSides(src *goban.Box, l, t, r, b int) *goban.Box {
 	// InsideSides does not word as expected :sob:
 	if l == 0 && t == 0 && r == 0 && b == 0 {
 		return src
@@ -32,9 +32,9 @@ func insideSides(src *goban.Box, l, t, r, b int) *goban.Box {
 	if b > 0 {
 		b--
 	}
-	return insideSides(tmp, l, t, r, b)
+	return InsideSides(tmp, l, t, r, b)
 }
 
-func delete(i int, s []string) []string {
+func Delete(i int, s []string) []string {
 	return append(s[:i], s[i+1:]...)
 }

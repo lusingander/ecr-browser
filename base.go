@@ -3,6 +3,8 @@ package main
 import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/eihigh/goban"
+	"github.com/lusingander/ecr-browser/layout"
+	"github.com/lusingander/ecr-browser/util"
 )
 
 const (
@@ -15,7 +17,7 @@ var (
 
 type baseView struct {
 	base *goban.Box
-	*breadcrumb
+	*layout.Breadcrumb
 	*gridLayout
 	current *defaultView
 	repo    *defaultView
@@ -31,7 +33,7 @@ type defaultView struct {
 
 func newBaseView(svc *ecr.ECR) (*baseView, error) {
 	b := goban.Screen()
-	g := createGrid(insideSides(b, 1, 2, 1, 1))
+	g := createGrid(util.InsideSides(b, 1, 2, 1, 1))
 	dv, err := newRepositoryDefaultView(g, svc)
 	if err != nil {
 		return nil, err
@@ -39,13 +41,13 @@ func newBaseView(svc *ecr.ECR) (*baseView, error) {
 	bc := newECRBreadcrumb(b.Pos.X+2, b.Pos.Y+1, b.Size.X-3)
 	bv := &baseView{
 		base:       b,
-		breadcrumb: bc,
+		Breadcrumb: bc,
 		gridLayout: g,
 		current:    dv,
 		repo:       dv,
 		images:     make(cacheMap),
 	}
-	pushViews(bv, bc, dv.list, dv.detail)
+	util.PushViews(bv, bc, dv.list, dv.detail)
 	return bv, nil
 }
 
@@ -63,20 +65,20 @@ func (v *baseView) View() {
 	v.base.Enclose(mainViewTitle)
 }
 
-func newECRBreadcrumb(x, y, w int) *breadcrumb {
-	b := newBreadcrumb(x, y, w)
+func newECRBreadcrumb(x, y, w int) *layout.Breadcrumb {
+	b := layout.NewBreadcrumb(x, y, w)
 	for _, v := range breadcrumbBases {
-		b.push(v)
+		b.Push(v)
 	}
 	return b
 }
 
 func (v *baseView) pushBreadcrumb(s string) {
-	v.breadcrumb.push(s)
+	v.Breadcrumb.Push(s)
 }
 
 func (v *baseView) popBreadcrumb() string {
-	return v.breadcrumb.pop()
+	return v.Breadcrumb.Pop()
 }
 
 func (v *baseView) displayRepositoryView() {
@@ -92,9 +94,9 @@ func (v *baseView) displayImageViews(svc *ecr.ECR) error {
 		return nil
 	}
 
-	loading := newLoadingDialog(v.base)
-	go loading.display()
-	defer loading.close()
+	loading := layout.NewLoadingDialog(v.base)
+	go loading.Display()
+	defer loading.Close()
 
 	dv, err := v.loadImageDefaultView(v.gridLayout, svc, repo)
 	if err != nil {
@@ -141,9 +143,9 @@ func (v *baseView) getParentRepositoryName() (name string, ok bool) {
 }
 
 func (v *baseView) updateBaseViews(dv *defaultView) {
-	removeViews(dv.list, dv.detail)
+	util.RemoveViews(dv.list, dv.detail)
 	v.current = dv
-	pushViews(dv.list, dv.detail)
+	util.PushViews(dv.list, dv.detail)
 }
 
 type gridLayout struct {

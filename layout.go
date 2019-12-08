@@ -3,37 +3,9 @@ package main
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/eihigh/goban"
 )
-
-const (
-	breadcrumbSep = " > "
-)
-
-type breadcrumb struct {
-	x, y, w  int
-	elements []string
-}
-
-func newBreadcrumb(x, y, w int) *breadcrumb {
-	return &breadcrumb{x, y, w, make([]string, 0)}
-}
-
-func (b *breadcrumb) push(e string) {
-	b.elements = append(b.elements, e)
-}
-
-func (b *breadcrumb) pop() string {
-	e := b.elements[len(b.elements)-1]
-	b.elements = delete(len(b.elements)-1, b.elements)
-	return e
-}
-
-func (b *breadcrumb) View() {
-	goban.NewBox(b.x, b.y, b.w, 1).Puts(strings.Join(b.elements, breadcrumbSep))
-}
 
 type listViewBase struct {
 	cur       int
@@ -218,38 +190,4 @@ func (v *listViewBase) calcScrollTopPos(barLength int) int {
 	viewTopMaxMove := float64(len(v.elements) - v.height())
 	currentViewTop := float64(v.viewTop)
 	return int((currentViewTop / viewTopMaxMove) * barMaxMove)
-}
-
-type loadingDialog struct {
-	parent *goban.Box
-	ch     chan bool
-}
-
-func newLoadingDialog(parent *goban.Box) *loadingDialog {
-	return &loadingDialog{parent, make(chan bool)}
-}
-
-func (d *loadingDialog) View() {
-	str := "Now Loading..."
-	dialog := goban.NewBox(0, 0, len(str)+10, 7).CenterOf(d.parent).Enclose("")
-	strArea := goban.NewBox(0, 0, len(str), 1).CenterOf(dialog)
-	strArea.Puts(str)
-}
-
-func (d *loadingDialog) display() {
-	goban.PushView(d)
-	defer goban.RemoveView(d)
-	goban.Show()
-	// should catch es(goban.Events) and process(discard?)
-	<-d.ch
-}
-
-func (d *loadingDialog) close() {
-	d.ch <- true
-}
-
-func (d *loadingDialog) waitFor(f func()) {
-	go d.display()
-	defer d.close()
-	f()
 }
