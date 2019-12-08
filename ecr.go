@@ -18,14 +18,20 @@ func fetchRepositories(svc *ecr.ECR) ([]*repository, error) {
 	input := &ecr.DescribeRepositoriesInput{
 		MaxResults: aws.Int64(100),
 	}
-	output, err := svc.DescribeRepositories(input)
-	if err != nil {
-		return nil, err
-	}
 	var ret []*repository
-	// TODO: consider NextToken
-	for _, r := range output.Repositories {
-		ret = append(ret, newRepository(r))
+	for {
+		output, err := svc.DescribeRepositories(input)
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range output.Repositories {
+			ret = append(ret, newRepository(r))
+		}
+		nextToken := aws.StringValue(output.NextToken)
+		if nextToken == "" {
+			break
+		}
+		input.SetNextToken(nextToken)
 	}
 	return ret, nil
 }
@@ -35,14 +41,20 @@ func fetchImages(svc *ecr.ECR, repositoryName string) ([]*image, error) {
 		MaxResults:     aws.Int64(100),
 		RepositoryName: aws.String(repositoryName),
 	}
-	output, err := svc.DescribeImages(input)
-	if err != nil {
-		return nil, err
-	}
 	var ret []*image
-	// TODO: consider NextToken
-	for _, i := range output.ImageDetails {
-		ret = append(ret, newImage(i))
+	for {
+		output, err := svc.DescribeImages(input)
+		if err != nil {
+			return nil, err
+		}
+		for _, i := range output.ImageDetails {
+			ret = append(ret, newImage(i))
+		}
+		nextToken := aws.StringValue(output.NextToken)
+		if nextToken == "" {
+			break
+		}
+		input.SetNextToken(nextToken)
 	}
 	return ret, nil
 }
