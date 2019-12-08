@@ -6,6 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/eihigh/goban"
+	"github.com/gdamore/tcell"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -39,7 +40,7 @@ func app(_ context.Context, es goban.Events) error {
 
 	for {
 		goban.Show()
-		switch es.ReadKey().Rune() {
+		switch key := es.ReadKey(); key.Rune() {
 		case 'k':
 			bv.current.list.selectPrev()
 		case 'j':
@@ -52,8 +53,13 @@ func app(_ context.Context, es goban.Events) error {
 			bv.displayImageViews(svc)
 		case 'h':
 			bv.displayRepositoryView()
+		case 'q':
+			return nil // quit
 		default:
-			return nil
+			switch key.Key() {
+			case tcell.KeyCtrlC:
+				return nil // quit
+			}
 		}
 	}
 }
