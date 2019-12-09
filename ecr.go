@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ecr"
@@ -57,4 +59,14 @@ func fetchImages(svc *ecr.ECR, repositoryName string) ([]*image, error) {
 		input.SetNextToken(nextToken)
 	}
 	return ret, nil
+}
+
+func createECRConsoleURL(region string) string {
+	url := "https://%s.console.aws.amazon.com/ecr/repositories?region=%s"
+	return fmt.Sprintf(url, region, region)
+}
+
+func createECRConsoleRepositoryURL(region string, repo string) string {
+	url := "https://%s.console.aws.amazon.com/ecr/repositories/%s/?region=%s"
+	return fmt.Sprintf(url, region, repo, region)
 }

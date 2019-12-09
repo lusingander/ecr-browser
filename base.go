@@ -5,6 +5,7 @@ import (
 	"github.com/eihigh/goban"
 	"github.com/lusingander/ecr-browser/layout"
 	"github.com/lusingander/ecr-browser/util"
+	"github.com/pkg/browser"
 )
 
 const (
@@ -146,6 +147,17 @@ func (v *baseView) updateBaseViews(dv *defaultView) {
 	util.RemoveViews(dv.list, dv.detail)
 	v.current = dv
 	util.PushViews(dv.list, dv.detail)
+}
+
+func (v *baseView) openWebBrowser() error {
+	rv, ok := v.current.list.(*repositoryListView)
+	if !ok {
+		// TODO: error
+		return nil
+	}
+	repo := rv.currentRepositoryName()
+	url := createECRConsoleRepositoryURL(targetRegion, repo)
+	return browser.OpenURL(url)
 }
 
 type gridLayout struct {

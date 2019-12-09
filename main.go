@@ -53,6 +53,8 @@ func app(_ context.Context, es goban.Events) error {
 			bv.displayImageViews(svc)
 		case 'h':
 			bv.displayRepositoryView()
+		case 'o':
+			bv.openWebBrowser()
 		case 'q':
 			return nil // quit
 		default:

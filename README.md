@@ -13,6 +13,7 @@ TUI browser for AWS ECR written in Go
 |G|move to the bottom|
 |h|move to repository list|
 |l|move to image list|
+|o|open AWS management console repository page in web browser|
 |q / Ctrl+C|quit|
 
 ## Screenshot
