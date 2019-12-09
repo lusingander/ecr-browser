@@ -23,6 +23,7 @@ type baseView struct {
 	current *defaultView
 	repo    *defaultView
 	images  cacheMap
+	es      goban.Events
 }
 
 type cacheMap map[string]*defaultView
@@ -32,7 +33,7 @@ type defaultView struct {
 	detail detailView
 }
 
-func newBaseView(svc *ecr.ECR) (*baseView, error) {
+func newBaseView(svc *ecr.ECR, es goban.Events) (*baseView, error) {
 	b := goban.Screen()
 	g := createGrid(util.InsideSides(b, 1, 2, 1, 1))
 	dv, err := newRepositoryDefaultView(g, svc)
@@ -40,16 +41,21 @@ func newBaseView(svc *ecr.ECR) (*baseView, error) {
 		return nil, err
 	}
 	bc := newECRBreadcrumb(b.Pos.X+2, b.Pos.Y+1, b.Size.X-3)
-	bv := &baseView{
+	bv := createBaseView(b, bc, g, dv, es)
+	util.PushViews(bv, bc, dv.list, dv.detail)
+	return bv, nil
+}
+
+func createBaseView(b *goban.Box, bc *layout.Breadcrumb, g *gridLayout, dv *defaultView, es goban.Events) *baseView {
+	return &baseView{
 		base:       b,
 		Breadcrumb: bc,
 		gridLayout: g,
 		current:    dv,
 		repo:       dv,
 		images:     make(cacheMap),
+		es:         es,
 	}
-	util.PushViews(bv, bc, dv.list, dv.detail)
-	return bv, nil
 }
 
 func newRepositoryDefaultView(g *gridLayout, svc *ecr.ECR) (*defaultView, error) {
@@ -95,7 +101,7 @@ func (v *baseView) displayImageViews(svc *ecr.ECR) error {
 		return nil
 	}
 
-	loading := layout.NewLoadingDialog(v.base)
+	loading := layout.NewLoadingDialog(v.base, v.es)
 	go loading.Display()
 	defer loading.Close()
 

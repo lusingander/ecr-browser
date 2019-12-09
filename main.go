@@ -33,7 +33,7 @@ var (
 
 func app(_ context.Context, es goban.Events) error {
 	svc := createClient()
-	bv, err := newBaseView(svc)
+	bv, err := newBaseView(svc, es)
 	if err != nil {
 		return err
 	}

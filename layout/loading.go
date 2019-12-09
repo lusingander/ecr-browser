@@ -9,10 +9,11 @@ const (
 type LoadingDialog struct {
 	parent *goban.Box
 	ch     chan bool
+	es     goban.Events
 }
 
-func NewLoadingDialog(parent *goban.Box) *LoadingDialog {
-	return &LoadingDialog{parent, make(chan bool)}
+func NewLoadingDialog(parent *goban.Box, es goban.Events) *LoadingDialog {
+	return &LoadingDialog{parent, make(chan bool), es}
 }
 
 func (d *LoadingDialog) View() {
@@ -25,8 +26,14 @@ func (d *LoadingDialog) Display() {
 	goban.PushView(d)
 	defer goban.RemoveView(d)
 	goban.Show()
-	// should catch es(goban.Events) and process(discard?)
-	<-d.ch
+	for {
+		select {
+		case <-d.ch:
+			return
+		case <-d.es:
+			// do nothing
+		}
+	}
 }
 
 func (d *LoadingDialog) Close() {
