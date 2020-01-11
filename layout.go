@@ -7,6 +7,10 @@ import (
 	"github.com/eihigh/goban"
 )
 
+const (
+	countFormat = " %*d/%*d "
+)
+
 type listViewBase struct {
 	cur       int
 	box       *goban.Box
