@@ -4,19 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/eihigh/goban"
 	"github.com/gdamore/tcell"
+	"github.com/lusingander/ecr-browser/aws"
 	"github.com/mattn/go-runewidth"
 )
 
-const (
-	targetRegion = endpoints.ApNortheast1RegionID
-)
-
-const (
-	datetimeFormat = "2006-01-02 15:04:05"
-)
+const ()
 
 const (
 	gridAreaList   = "list"
@@ -30,13 +24,8 @@ var (
 	)
 )
 
-type containerClient interface {
-	fetchAllRepositories() ([]*repository, error)
-	fetchAllImages(repo string) ([]*image, error)
-}
-
 func app(_ context.Context, es goban.Events) error {
-	cli := newAwsEcrClient()
+	cli := aws.NewAwsEcrClient()
 	bv, err := newBaseView(cli, es)
 	if err != nil {
 		return err

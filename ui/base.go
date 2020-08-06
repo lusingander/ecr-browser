@@ -2,6 +2,7 @@ package ui
 
 import (
 	"github.com/eihigh/goban"
+	"github.com/lusingander/ecr-browser/domain"
 	"github.com/lusingander/ecr-browser/layout"
 	"github.com/lusingander/ecr-browser/util"
 	"github.com/pkg/browser"
@@ -32,7 +33,7 @@ type defaultView struct {
 	detail detailView
 }
 
-func newBaseView(cli containerClient, es goban.Events) (*baseView, error) {
+func newBaseView(cli domain.ContainerClient, es goban.Events) (*baseView, error) {
 	b := goban.Screen()
 	g := createGrid(util.InsideSides(b, 1, 2, 1, 1))
 	dv, err := newRepositoryDefaultView(g, cli)
@@ -57,7 +58,7 @@ func createBaseView(b *goban.Box, bc *layout.Breadcrumb, g *gridLayout, dv *defa
 	}
 }
 
-func newRepositoryDefaultView(g *gridLayout, cli containerClient) (*defaultView, error) {
+func newRepositoryDefaultView(g *gridLayout, cli domain.ContainerClient) (*defaultView, error) {
 	lv, err := newRepositoryListView(g.list, cli)
 	if err != nil {
 		return nil, err
@@ -94,7 +95,7 @@ func (v *baseView) displayRepositoryView() {
 	}
 }
 
-func (v *baseView) displayImageViews(cli containerClient) error {
+func (v *baseView) displayImageViews(cli domain.ContainerClient) error {
 	repo, ok := v.getCurrentRepositoryName()
 	if !ok {
 		return nil
@@ -113,14 +114,14 @@ func (v *baseView) displayImageViews(cli containerClient) error {
 	return nil
 }
 
-func (v *baseView) loadImageDefaultView(g *gridLayout, cli containerClient, repo string) (*defaultView, error) {
+func (v *baseView) loadImageDefaultView(g *gridLayout, cli domain.ContainerClient, repo string) (*defaultView, error) {
 	if i, ok := v.images[repo]; ok {
 		return i, nil
 	}
 	return v.newImageDefaultView(g, cli, repo)
 }
 
-func (v *baseView) newImageDefaultView(g *gridLayout, cli containerClient, repo string) (*defaultView, error) {
+func (v *baseView) newImageDefaultView(g *gridLayout, cli domain.ContainerClient, repo string) (*defaultView, error) {
 	lv, err := newImageListView(g.list, cli, repo)
 	if err != nil {
 		return nil, err
@@ -161,7 +162,7 @@ func (v *baseView) openWebBrowser() error {
 		return nil
 	}
 	repo := rv.currentRepositoryName()
-	url := createECRConsoleRepositoryURL(targetRegion, repo)
+	url := createECRConsoleRepositoryURL(repo)
 	return browser.OpenURL(url)
 }
 

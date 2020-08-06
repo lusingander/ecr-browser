@@ -1,63 +1,26 @@
 package ui
 
 import (
-	"sort"
-	"time"
+	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/eihigh/goban"
+	"github.com/lusingander/ecr-browser/domain"
 )
 
 const (
 	repositoryListViewTitle = "REPOSITORIES"
 )
 
-type repository struct {
-	name          string
-	uri           string
-	arn           string
-	tagMutability string
-	createdAt     time.Time
-}
-
-func newRepository(r *ecr.Repository) *repository {
-	return &repository{
-		name:          aws.StringValue(r.RepositoryName),
-		uri:           aws.StringValue(r.RepositoryUri),
-		arn:           aws.StringValue(r.RepositoryArn),
-		tagMutability: aws.StringValue(r.ImageTagMutability),
-		createdAt:     aws.TimeValue(r.CreatedAt),
-	}
-}
-
-func (r *repository) display() string {
-	return r.name
-}
-
-func (r *repository) createdAtStr() string {
-	// TODO: consider timezone
-	return r.createdAt.Format(datetimeFormat)
-}
-
-func repositorySorter(repos []*repository) func(int, int) bool {
-	return func(i, j int) bool { return repos[i].name < repos[j].name }
-}
-
-func sortRepositories(repos []*repository) {
-	sort.Slice(repos, repositorySorter(repos))
-}
-
 type repositoryListView struct {
 	*listViewBase
 }
 
-func newRepositoryListView(b *goban.Box, cli containerClient) (*repositoryListView, error) {
-	repos, err := cli.fetchAllRepositories()
+func newRepositoryListView(b *goban.Box, cli domain.ContainerClient) (*repositoryListView, error) {
+	repos, err := cli.FetchAllRepositories()
 	if err != nil {
 		return nil, err
 	}
-	sortRepositories(repos)
+	domain.SortRepositories(repos)
 	return &repositoryListView{
 		listViewBase: &listViewBase{
 			box:      b,
@@ -67,7 +30,7 @@ func newRepositoryListView(b *goban.Box, cli containerClient) (*repositoryListVi
 	}, nil
 }
 
-func listViewElementsFromRepositories(repos []*repository) []listViewElement {
+func listViewElementsFromRepositories(repos []*domain.Repository) []listViewElement {
 	var elems []listViewElement
 	for _, repo := range repos {
 		elems = append(elems, repo)
@@ -76,15 +39,15 @@ func listViewElementsFromRepositories(repos []*repository) []listViewElement {
 }
 
 func (v *repositoryListView) currentRepositoryName() string {
-	if repo, ok := v.current().(*repository); ok {
-		return repo.name
+	if repo, ok := v.current().(*domain.Repository); ok {
+		return repo.Name
 	}
 	return ""
 }
 
 type repositoryDetailView struct {
 	box      *goban.Box
-	selected *repository
+	selected *domain.Repository
 }
 
 func newRepositoryDetailView(b *goban.Box) *repositoryDetailView {
@@ -92,7 +55,7 @@ func newRepositoryDetailView(b *goban.Box) *repositoryDetailView {
 }
 
 func (v *repositoryDetailView) update(e listViewElement) {
-	if repo, ok := e.(*repository); ok {
+	if repo, ok := e.(*domain.Repository); ok {
 		v.selected = repo
 	}
 }
@@ -101,14 +64,26 @@ func (v *repositoryDetailView) View() {
 	b := v.box.Enclose("DETAIL")
 	if v.selected != nil {
 		b.Puts("NAME:")
-		b.Puts("  " + v.selected.name)
+		b.Puts("  " + v.selected.Name)
 		b.Puts("URI:")
-		b.Puts("  " + v.selected.uri)
+		b.Puts("  " + v.selected.Uri)
 		b.Puts("ARN:")
-		b.Puts("  " + v.selected.arn)
+		b.Puts("  " + v.selected.Arn)
 		b.Puts("TAG MUTABILITY:")
-		b.Puts("  " + v.selected.tagMutability)
+		b.Puts("  " + v.selected.TagMutability)
 		b.Puts("CREATED AT:")
-		b.Puts("  " + v.selected.createdAtStr())
+		b.Puts("  " + v.selected.CreatedAtStr())
 	}
+}
+
+func createECRConsoleURL() string {
+	region := domain.TargetRegion
+	url := "https://%s.console.aws.amazon.com/ecr/repositories?region=%s"
+	return fmt.Sprintf(url, region, region)
+}
+
+func createECRConsoleRepositoryURL(repo string) string {
+	region := domain.TargetRegion
+	url := "https://%s.console.aws.amazon.com/ecr/repositories/%s/?region=%s"
+	return fmt.Sprintf(url, region, repo, region)
 }

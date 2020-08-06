@@ -21,7 +21,7 @@ type listViewBase struct {
 }
 
 type listViewElement interface {
-	display() string
+	Display() string
 }
 
 type listElementObserver interface {
@@ -37,7 +37,7 @@ func (v *listViewBase) View() {
 			b.Print("  ")
 		}
 		if e, ok := v.get(i + v.viewTop); ok {
-			b.Puts(e.display())
+			b.Puts(e.Display())
 		} else {
 			break
 		}
