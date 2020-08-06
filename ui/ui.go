@@ -6,15 +6,17 @@ import (
 
 	"github.com/eihigh/goban"
 	"github.com/gdamore/tcell"
-	"github.com/lusingander/ecr-browser/aws"
+	"github.com/lusingander/ecr-browser/domain"
 	"github.com/mattn/go-runewidth"
 )
-
-const ()
 
 const (
 	gridAreaList   = "list"
 	gridAreaDetail = "detail"
+)
+
+var (
+	client domain.ContainerClient
 )
 
 var (
@@ -25,8 +27,7 @@ var (
 )
 
 func app(_ context.Context, es goban.Events) error {
-	cli := aws.NewAwsEcrClient()
-	bv, err := newBaseView(cli, es)
+	bv, err := newBaseView(client, es)
 	if err != nil {
 		return err
 	}
@@ -43,7 +44,7 @@ func app(_ context.Context, es goban.Events) error {
 		case 'G':
 			bv.current.list.selectLast()
 		case 'l':
-			bv.displayImageViews(cli)
+			bv.displayImageViews(client)
 		case 'h':
 			bv.displayRepositoryView()
 		case 'o':
@@ -63,7 +64,8 @@ func setting() {
 	runewidth.DefaultCondition = &runewidth.Condition{EastAsianWidth: false}
 }
 
-func Start() error {
+func Start(cli domain.ContainerClient) error {
+	client = cli
 	setting()
 	return goban.Main(app)
 }
