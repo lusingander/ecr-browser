@@ -69,8 +69,8 @@ type imageListView struct {
 	repository string
 }
 
-func newImageListView(b *goban.Box, svc *ecr.ECR, repoName string) (*imageListView, error) {
-	imgs, err := fetchImages(svc, repoName)
+func newImageListView(b *goban.Box, cli containerClient, repoName string) (*imageListView, error) {
+	imgs, err := cli.fetchAllImages(repoName)
 	if err != nil {
 		return nil, err
 	}

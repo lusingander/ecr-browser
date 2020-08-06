@@ -52,8 +52,8 @@ type repositoryListView struct {
 	*listViewBase
 }
 
-func newRepositoryListView(b *goban.Box, svc *ecr.ECR) (*repositoryListView, error) {
-	repos, err := fetchRepositories(svc)
+func newRepositoryListView(b *goban.Box, cli containerClient) (*repositoryListView, error) {
+	repos, err := cli.fetchAllRepositories()
 	if err != nil {
 		return nil, err
 	}

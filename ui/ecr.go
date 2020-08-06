@@ -8,6 +8,24 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 )
 
+type awsEcrClinet struct {
+	cli *ecr.ECR
+}
+
+func newAwsEcrClient() containerClient {
+	return &awsEcrClinet{
+		cli: createClient(),
+	}
+}
+
+func (c *awsEcrClinet) fetchAllRepositories() ([]*repository, error) {
+	return fetchRepositories(c.cli)
+}
+
+func (c *awsEcrClinet) fetchAllImages(repo string) ([]*image, error) {
+	return fetchImages(c.cli, repo)
+}
+
 func createClient() *ecr.ECR {
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String(targetRegion),

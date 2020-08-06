@@ -30,9 +30,14 @@ var (
 	)
 )
 
+type containerClient interface {
+	fetchAllRepositories() ([]*repository, error)
+	fetchAllImages(repo string) ([]*image, error)
+}
+
 func app(_ context.Context, es goban.Events) error {
-	svc := createClient()
-	bv, err := newBaseView(svc, es)
+	cli := newAwsEcrClient()
+	bv, err := newBaseView(cli, es)
 	if err != nil {
 		return err
 	}
@@ -49,7 +54,7 @@ func app(_ context.Context, es goban.Events) error {
 		case 'G':
 			bv.current.list.selectLast()
 		case 'l':
-			bv.displayImageViews(svc)
+			bv.displayImageViews(cli)
 		case 'h':
 			bv.displayRepositoryView()
 		case 'o':

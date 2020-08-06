@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/eihigh/goban"
 	"github.com/lusingander/ecr-browser/layout"
 	"github.com/lusingander/ecr-browser/util"
@@ -33,10 +32,10 @@ type defaultView struct {
 	detail detailView
 }
 
-func newBaseView(svc *ecr.ECR, es goban.Events) (*baseView, error) {
+func newBaseView(cli containerClient, es goban.Events) (*baseView, error) {
 	b := goban.Screen()
 	g := createGrid(util.InsideSides(b, 1, 2, 1, 1))
-	dv, err := newRepositoryDefaultView(g, svc)
+	dv, err := newRepositoryDefaultView(g, cli)
 	if err != nil {
 		return nil, err
 	}
@@ -58,8 +57,8 @@ func createBaseView(b *goban.Box, bc *layout.Breadcrumb, g *gridLayout, dv *defa
 	}
 }
 
-func newRepositoryDefaultView(g *gridLayout, svc *ecr.ECR) (*defaultView, error) {
-	lv, err := newRepositoryListView(g.list, svc)
+func newRepositoryDefaultView(g *gridLayout, cli containerClient) (*defaultView, error) {
+	lv, err := newRepositoryListView(g.list, cli)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +94,7 @@ func (v *baseView) displayRepositoryView() {
 	}
 }
 
-func (v *baseView) displayImageViews(svc *ecr.ECR) error {
+func (v *baseView) displayImageViews(cli containerClient) error {
 	repo, ok := v.getCurrentRepositoryName()
 	if !ok {
 		return nil
@@ -105,7 +104,7 @@ func (v *baseView) displayImageViews(svc *ecr.ECR) error {
 	go loading.Display()
 	defer loading.Close()
 
-	dv, err := v.loadImageDefaultView(v.gridLayout, svc, repo)
+	dv, err := v.loadImageDefaultView(v.gridLayout, cli, repo)
 	if err != nil {
 		return err
 	}
@@ -114,15 +113,15 @@ func (v *baseView) displayImageViews(svc *ecr.ECR) error {
 	return nil
 }
 
-func (v *baseView) loadImageDefaultView(g *gridLayout, svc *ecr.ECR, repo string) (*defaultView, error) {
+func (v *baseView) loadImageDefaultView(g *gridLayout, cli containerClient, repo string) (*defaultView, error) {
 	if i, ok := v.images[repo]; ok {
 		return i, nil
 	}
-	return v.newImageDefaultView(g, svc, repo)
+	return v.newImageDefaultView(g, cli, repo)
 }
 
-func (v *baseView) newImageDefaultView(g *gridLayout, svc *ecr.ECR, repo string) (*defaultView, error) {
-	lv, err := newImageListView(g.list, svc, repo)
+func (v *baseView) newImageDefaultView(g *gridLayout, cli containerClient, repo string) (*defaultView, error) {
+	lv, err := newImageListView(g.list, cli, repo)
 	if err != nil {
 		return nil, err
 	}
