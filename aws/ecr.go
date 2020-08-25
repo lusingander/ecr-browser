@@ -9,11 +9,15 @@ import (
 
 type awsEcrClinet struct {
 	cli *ecr.ECR
+	cacheMap
 }
+
+type cacheMap map[string][]*domain.Image
 
 func NewAwsEcrClient() domain.ContainerClient {
 	return &awsEcrClinet{
-		cli: createClient(),
+		cli:      createClient(),
+		cacheMap: make(cacheMap),
 	}
 }
 
@@ -40,6 +44,9 @@ func (c *awsEcrClinet) FetchAllRepositories() ([]*domain.Repository, error) {
 }
 
 func (c *awsEcrClinet) FetchAllImages(repo string) ([]*domain.Image, error) {
+	if cache, ok := c.cacheMap[repo]; ok {
+		return cache, nil
+	}
 	input := &ecr.DescribeImagesInput{
 		MaxResults:     aws.Int64(100),
 		RepositoryName: aws.String(repo),
@@ -59,6 +66,7 @@ func (c *awsEcrClinet) FetchAllImages(repo string) ([]*domain.Image, error) {
 		}
 		input.SetNextToken(nextToken)
 	}
+	c.cacheMap[repo] = ret
 	return ret, nil
 }
 

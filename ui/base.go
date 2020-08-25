@@ -22,11 +22,8 @@ type baseView struct {
 	*gridLayout
 	current *defaultView
 	repo    *defaultView
-	images  cacheMap
 	es      goban.Events
 }
-
-type cacheMap map[string]*defaultView
 
 type defaultView struct {
 	list   listView
@@ -53,7 +50,6 @@ func createBaseView(b *goban.Box, bc *layout.Breadcrumb, g *gridLayout, dv *defa
 		gridLayout: g,
 		current:    dv,
 		repo:       dv,
-		images:     make(cacheMap),
 		es:         es,
 	}
 }
@@ -115,9 +111,6 @@ func (v *baseView) displayImageViews(cli domain.ContainerClient) error {
 }
 
 func (v *baseView) loadImageDefaultView(g *gridLayout, cli domain.ContainerClient, repo string) (*defaultView, error) {
-	if i, ok := v.images[repo]; ok {
-		return i, nil
-	}
 	return v.newImageDefaultView(g, cli, repo)
 }
 
@@ -129,7 +122,6 @@ func (v *baseView) newImageDefaultView(g *gridLayout, cli domain.ContainerClient
 	dv := newImageDetailView(g.detail)
 	lv.addObserver(dv)
 	ret := &defaultView{lv, dv}
-	v.images[repo] = ret
 	return ret, nil
 }
 

@@ -9,10 +9,16 @@ import (
 	"github.com/lusingander/ecr-browser/domain"
 )
 
-type mockClinet struct{}
+type mockClinet struct {
+	cacheMap
+}
+
+type cacheMap map[string][]*domain.Image
 
 func NewMockClient() domain.ContainerClient {
-	return &mockClinet{}
+	return &mockClinet{
+		cacheMap: make(cacheMap),
+	}
 }
 
 func (*mockClinet) FetchAllRepositories() ([]*domain.Repository, error) {
@@ -24,7 +30,11 @@ func (*mockClinet) FetchAllRepositories() ([]*domain.Repository, error) {
 	return repos, nil
 }
 
-func (*mockClinet) FetchAllImages(repo string) ([]*domain.Image, error) {
+func (c *mockClinet) FetchAllImages(repo string) ([]*domain.Image, error) {
+	if cache, ok := c.cacheMap[repo]; ok {
+		return cache, nil
+	}
+
 	time.Sleep(time.Millisecond * 500)
 
 	n := 50
@@ -32,6 +42,9 @@ func (*mockClinet) FetchAllImages(repo string) ([]*domain.Image, error) {
 	for i := 1; i <= n; i++ {
 		images = append(images, image(i, repo))
 	}
+
+	c.cacheMap[repo] = images
+
 	return images, nil
 }
 
