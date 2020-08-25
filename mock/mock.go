@@ -25,7 +25,7 @@ func (*mockClinet) FetchAllRepositories() ([]*domain.Repository, error) {
 }
 
 func (*mockClinet) FetchAllImages(repo string) ([]*domain.Image, error) {
-	time.Sleep(time.Second)
+	time.Sleep(time.Millisecond * 500)
 
 	n := 50
 	images := make([]*domain.Image, 0, n)
