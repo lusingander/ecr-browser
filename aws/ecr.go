@@ -18,11 +18,48 @@ func NewAwsEcrClient() domain.ContainerClient {
 }
 
 func (c *awsEcrClinet) FetchAllRepositories() ([]*domain.Repository, error) {
-	return fetchRepositories(c.cli)
+	input := &ecr.DescribeRepositoriesInput{
+		MaxResults: aws.Int64(100),
+	}
+	var ret []*domain.Repository
+	for {
+		output, err := c.cli.DescribeRepositories(input)
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range output.Repositories {
+			ret = append(ret, newRepository(r))
+		}
+		nextToken := aws.StringValue(output.NextToken)
+		if nextToken == "" {
+			break
+		}
+		input.SetNextToken(nextToken)
+	}
+	return ret, nil
 }
 
 func (c *awsEcrClinet) FetchAllImages(repo string) ([]*domain.Image, error) {
-	return fetchImages(c.cli, repo)
+	input := &ecr.DescribeImagesInput{
+		MaxResults:     aws.Int64(100),
+		RepositoryName: aws.String(repo),
+	}
+	var ret []*domain.Image
+	for {
+		output, err := c.cli.DescribeImages(input)
+		if err != nil {
+			return nil, err
+		}
+		for _, i := range output.ImageDetails {
+			ret = append(ret, newImage(i))
+		}
+		nextToken := aws.StringValue(output.NextToken)
+		if nextToken == "" {
+			break
+		}
+		input.SetNextToken(nextToken)
+	}
+	return ret, nil
 }
 
 func newRepository(r *ecr.Repository) *domain.Repository {
@@ -50,49 +87,4 @@ func createClient() *ecr.ECR {
 	}))
 	svc := ecr.New(sess)
 	return svc
-}
-
-func fetchRepositories(svc *ecr.ECR) ([]*domain.Repository, error) {
-	input := &ecr.DescribeRepositoriesInput{
-		MaxResults: aws.Int64(100),
-	}
-	var ret []*domain.Repository
-	for {
-		output, err := svc.DescribeRepositories(input)
-		if err != nil {
-			return nil, err
-		}
-		for _, r := range output.Repositories {
-			ret = append(ret, newRepository(r))
-		}
-		nextToken := aws.StringValue(output.NextToken)
-		if nextToken == "" {
-			break
-		}
-		input.SetNextToken(nextToken)
-	}
-	return ret, nil
-}
-
-func fetchImages(svc *ecr.ECR, repositoryName string) ([]*domain.Image, error) {
-	input := &ecr.DescribeImagesInput{
-		MaxResults:     aws.Int64(100),
-		RepositoryName: aws.String(repositoryName),
-	}
-	var ret []*domain.Image
-	for {
-		output, err := svc.DescribeImages(input)
-		if err != nil {
-			return nil, err
-		}
-		for _, i := range output.ImageDetails {
-			ret = append(ret, newImage(i))
-		}
-		nextToken := aws.StringValue(output.NextToken)
-		if nextToken == "" {
-			break
-		}
-		input.SetNextToken(nextToken)
-	}
-	return ret, nil
 }
