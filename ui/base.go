@@ -2,6 +2,7 @@ package ui
 
 import (
 	"github.com/eihigh/goban"
+	"github.com/gdamore/tcell"
 	"github.com/lusingander/ecr-browser/domain"
 	"github.com/lusingander/ecr-browser/layout"
 	"github.com/lusingander/ecr-browser/util"
@@ -23,6 +24,17 @@ type baseView struct {
 	current *defaultView
 	repo    *defaultView
 	es      goban.Events
+	focused operator
+}
+
+type operator interface {
+	operate(*tcell.EventKey)
+}
+
+func (v *baseView) operate(key *tcell.EventKey) {
+	if v.focused != nil {
+		v.focused.operate(key)
+	}
 }
 
 type defaultView struct {

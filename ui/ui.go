@@ -34,29 +34,11 @@ func app(_ context.Context, es goban.Events) error {
 
 	for {
 		goban.Show()
-		switch key := es.ReadKey(); key.Rune() {
-		case 'k':
-			bv.current.list.selectPrev()
-		case 'j':
-			bv.current.list.selectNext()
-		case 'g':
-			bv.current.list.selectFirst()
-		case 'G':
-			bv.current.list.selectLast()
-		case 'l':
-			bv.displayImageViews(client)
-		case 'h':
-			bv.displayRepositoryView()
-		case 'o':
-			bv.openWebBrowser()
-		case 'q':
-			return nil // quit
-		default:
-			switch key.Key() {
-			case tcell.KeyCtrlC:
-				return nil // quit
-			}
+		key := es.ReadKey()
+		if key.Rune() == 'q' || key.Key() == tcell.KeyCtrlC {
+			return nil
 		}
+		bv.operate(key)
 	}
 }
 

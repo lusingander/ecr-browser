@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/eihigh/goban"
+	"github.com/gdamore/tcell"
 )
 
 const (
@@ -26,6 +27,19 @@ type listViewElement interface {
 
 type listElementObserver interface {
 	update(e listViewElement)
+}
+
+func (v *listViewBase) operate(key *tcell.EventKey) {
+	switch key.Rune() {
+	case 'k':
+		v.selectPrev()
+	case 'j':
+		v.selectNext()
+	case 'g':
+		v.selectFirst()
+	case 'G':
+		v.selectLast()
+	}
 }
 
 func (v *listViewBase) View() {
