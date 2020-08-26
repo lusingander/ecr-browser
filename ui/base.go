@@ -3,7 +3,6 @@ package ui
 import (
 	"github.com/eihigh/goban"
 	"github.com/gdamore/tcell"
-	"github.com/lusingander/ecr-browser/domain"
 	"github.com/lusingander/ecr-browser/layout"
 	"github.com/lusingander/ecr-browser/util"
 )
@@ -16,78 +15,124 @@ var (
 	breadcrumbBases = []string{"ECR", "REPOSITORIES"}
 )
 
-type baseView struct {
-	base *goban.Box
-	*layout.Breadcrumb
-	*gridLayout
-	current *defaultView
-	repo    *defaultView
-	es      goban.Events
-	focused operator
-}
-
 type operator interface {
 	operate(*tcell.EventKey)
 }
 
-func (v *baseView) operate(key *tcell.EventKey) {
-	if v.focused != nil {
-		v.focused.operate(key)
+type viewStack [][]goban.View
+
+func newViewStack() viewStack {
+	return make([][]goban.View, 0)
+}
+
+func (s viewStack) push(vs ...goban.View) {
+	s = append(s, vs)
+}
+
+func (s viewStack) pop(vs ...goban.View) []goban.View {
+	ret := s[len(s)-1]
+	s = s[:len(s)-1]
+	return ret
+}
+
+type ui struct {
+	*baseView
+	viewStack
+	focused operator
+}
+
+func newUI(es goban.Events) (*ui, error) {
+	ui := &ui{}
+	baseView, err := newBaseView(es)
+	if err != nil {
+		return nil, err
+	}
+	ui.baseView = baseView
+	ui.viewStack = newViewStack()
+	ui.loadRepositoryView(true)
+	return ui, nil
+}
+
+func (u *ui) pushViews(vs ...goban.View) {
+	u.viewStack.push(vs...)
+	util.PushViews(vs...)
+}
+
+func (u *ui) popViews() {
+	if len(u.viewStack) > 0 {
+		vs := u.viewStack.pop()
+		util.RemoveViews(vs...)
 	}
 }
 
-type defaultView struct {
-	list   *listViewBase
-	detail detailView
+func (u *ui) operate(key *tcell.EventKey) {
+	if u.focused != nil {
+		u.focused.operate(key)
+	}
 }
 
-func newBaseView(cli domain.ContainerClient, es goban.Events) (*baseView, error) {
+func (u *ui) loadRepositoryView(init bool) error {
+	loading := layout.NewLoadingDialog(u.baseView.base, u.baseView.es)
+	go loading.Display()
+	defer loading.Close()
+
+	lv, dv, err := u.baseView.newRepositoryView()
+	if err != nil {
+		return err
+	}
+	lv.setBaseUI(u)
+	u.pushViews(lv, dv)
+	u.focused = lv
+	if !init {
+		u.baseView.popBreadcrumb()
+	}
+	return nil
+}
+
+func (u *ui) loadImageViews(repo string) error {
+	loading := layout.NewLoadingDialog(u.baseView.base, u.baseView.es)
+	go loading.Display()
+	defer loading.Close()
+
+	lv, dv, err := u.baseView.newImageView(repo)
+	if err != nil {
+		return err
+	}
+	lv.setBaseUI(u)
+	u.popViews()
+	u.pushViews(lv, dv)
+	u.focused = lv
+	u.baseView.pushBreadcrumb(repo)
+	return nil
+}
+
+type baseView struct {
+	base *goban.Box
+	*layout.Breadcrumb
+	*gridLayout
+	es goban.Events
+}
+
+func newBaseView(es goban.Events) (*baseView, error) {
+	bv := &baseView{es: es}
 	b := goban.Screen()
-	g := createGrid(util.InsideSides(b, 1, 2, 1, 1))
-	dv, err := newRepositoryDefaultView(g, cli)
-	if err != nil {
-		return nil, err
-	}
-	bc := newECRBreadcrumb(b.Pos.X+2, b.Pos.Y+1, b.Size.X-3)
-	bv := createBaseView(b, bc, g, dv, es)
-	util.PushViews(bv, bc, dv.list, dv.detail)
+	bv.base = b
+	bv.createGrid(util.InsideSides(b, 1, 2, 1, 1))
+	bv.newECRBreadcrumb(b.Pos.X+2, b.Pos.Y+1, b.Size.X-3)
+	util.PushViews(bv, bv.Breadcrumb)
 	return bv, nil
-}
-
-func createBaseView(b *goban.Box, bc *layout.Breadcrumb, g *gridLayout, dv *defaultView, es goban.Events) *baseView {
-	bv := &baseView{
-		base:       b,
-		Breadcrumb: bc,
-		gridLayout: g,
-		current:    dv,
-		repo:       dv,
-		es:         es,
-		focused:    dv.list,
-	}
-	dv.list.setParent(bv)
-	return bv
-}
-
-func newRepositoryDefaultView(g *gridLayout, cli domain.ContainerClient) (*defaultView, error) {
-	lv, err := newRepositoryListView(g.list, cli)
-	if err != nil {
-		return nil, err
-	}
-	dv := newRepositoryDetailView(g.detail)
-	lv.addObserver(dv)
-	return &defaultView{lv.listViewBase, dv}, nil
 }
 
 func (v *baseView) View() {
 	v.base.Enclose(mainViewTitle)
 }
 
-func newECRBreadcrumb(x, y, w int) *layout.Breadcrumb {
+func (v *baseView) newECRBreadcrumb(x, y, w int) {
 	b := layout.NewBreadcrumb(x, y, w)
 	for _, v := range breadcrumbBases {
 		b.Push(v)
 	}
-	return b
+	v.Breadcrumb = b
 }
 
 func (v *baseView) pushBreadcrumb(s string) {
@@ -98,44 +143,24 @@ func (v *baseView) popBreadcrumb() string {
 	return v.Breadcrumb.Pop()
 }
 
-func (v *baseView) displayRepositoryView() {
-	v.updateBaseViews(v.repo)
-	v.popBreadcrumb()
-}
-
-func (v *baseView) displayImageViews(repo string) error {
-	loading := layout.NewLoadingDialog(v.base, v.es)
-	go loading.Display()
-	defer loading.Close()
-
-	dv, err := v.loadImageDefaultView(v.gridLayout, client, repo)
+func (v *baseView) newRepositoryView() (*repositoryListView, *repositoryDetailView, error) {
+	lv, err := newRepositoryListView(v.gridLayout.list)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	v.updateBaseViews(dv)
-	v.pushBreadcrumb(repo)
-	return nil
-}
-
-func (v *baseView) loadImageDefaultView(g *gridLayout, cli domain.ContainerClient, repo string) (*defaultView, error) {
-	return v.newImageDefaultView(g, cli, repo)
-}
-
-func (v *baseView) newImageDefaultView(g *gridLayout, cli domain.ContainerClient, repo string) (*defaultView, error) {
-	lv, err := newImageListView(g.list, cli, repo)
-	if err != nil {
-		return nil, err
-	}
-	dv := newImageDetailView(g.detail)
+	dv := newRepositoryDetailView(v.gridLayout.detail)
 	lv.addObserver(dv)
-	ret := &defaultView{lv.listViewBase, dv}
-	return ret, nil
+	return lv, dv, nil
 }
 
-func (v *baseView) updateBaseViews(dv *defaultView) {
-	util.RemoveViews(dv.list, dv.detail)
-	v.current = dv
-	util.PushViews(dv.list, dv.detail)
+func (v *baseView) newImageView(repo string) (*imageListView, *imageDetailView, error) {
+	lv, err := newImageListView(v.gridLayout.list, repo)
+	if err != nil {
+		return nil, nil, err
+	}
+	dv := newImageDetailView(v.gridLayout.detail)
+	lv.addObserver(dv)
+	return lv, dv, nil
 }
 
 type gridLayout struct {
@@ -143,12 +168,8 @@ type gridLayout struct {
 	detail *goban.Box
 }
 
-func createGrid(b *goban.Box) *gridLayout {
+func (v *baseView) createGrid(b *goban.Box) {
 	list := b.GridItem(grid, gridAreaList)
 	detail := b.GridItem(grid, gridAreaDetail)
-	return &gridLayout{list, detail}
-}
-
-type detailView interface {
-	goban.View
+	v.gridLayout = &gridLayout{list, detail}
 }

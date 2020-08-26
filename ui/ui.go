@@ -27,7 +27,7 @@ var (
 )
 
 func app(_ context.Context, es goban.Events) error {
-	bv, err := newBaseView(client, es)
+	ui, err := newUI(es)
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func app(_ context.Context, es goban.Events) error {
 		if key.Rune() == 'q' || key.Key() == tcell.KeyCtrlC {
 			return nil
 		}
-		bv.operate(key)
+		ui.operate(key)
 	}
 }
 

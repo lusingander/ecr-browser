@@ -17,8 +17,8 @@ type repositoryListView struct {
 	*listViewBase
 }
 
-func newRepositoryListView(b *goban.Box, cli domain.ContainerClient) (*repositoryListView, error) {
-	repos, err := cli.FetchAllRepositories()
+func newRepositoryListView(b *goban.Box) (*repositoryListView, error) {
+	repos, err := client.FetchAllRepositories()
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func listViewElementsFromRepositories(repos []*domain.Repository) []listViewElem
 func (v *repositoryListView) operate(key *tcell.EventKey) {
 	switch key.Rune() {
 	case 'l':
-		v.parent.displayImageViews(v.currentRepositoryName())
+		v.ui.loadImageViews(v.currentRepositoryName())
 	case 'o':
 		v.openWebBrowser()
 	default:

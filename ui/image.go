@@ -15,8 +15,8 @@ type imageListView struct {
 	repository string
 }
 
-func newImageListView(b *goban.Box, cli domain.ContainerClient, repoName string) (*imageListView, error) {
-	imgs, err := cli.FetchAllImages(repoName)
+func newImageListView(b *goban.Box, repoName string) (*imageListView, error) {
+	imgs, err := client.FetchAllImages(repoName)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func listViewElementsFromImages(imgs []*domain.Image) []listViewElement {
 func (v *imageListView) operate(key *tcell.EventKey) {
 	switch key.Rune() {
 	case 'h':
-		v.parent.displayRepositoryView()
+		v.ui.loadRepositoryView(false)
 	default:
 		v.listViewBase.operate(key)
 	}

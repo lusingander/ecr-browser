@@ -13,7 +13,7 @@ const (
 )
 
 type listViewBase struct {
-	parent    *baseView
+	*ui
 	cur       int
 	box       *goban.Box
 	elements  []listViewElement
@@ -43,8 +43,8 @@ func (v *listViewBase) operate(key *tcell.EventKey) {
 	}
 }
 
-func (v *listViewBase) setParent(parent *baseView) {
-	v.parent = parent
+func (v *listViewBase) setBaseUI(ui *ui) {
+	v.ui = ui
 }
 
 func (v *listViewBase) View() {
