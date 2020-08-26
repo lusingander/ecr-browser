@@ -2,6 +2,7 @@ package ui
 
 import (
 	"github.com/eihigh/goban"
+	"github.com/gdamore/tcell"
 	"github.com/lusingander/ecr-browser/domain"
 )
 
@@ -36,6 +37,15 @@ func listViewElementsFromImages(imgs []*domain.Image) []listViewElement {
 		elems = append(elems, img)
 	}
 	return elems
+}
+
+func (v *imageListView) operate(key *tcell.EventKey) {
+	switch key.Rune() {
+	case 'h':
+		v.parent.displayRepositoryView()
+	default:
+		v.listViewBase.operate(key)
+	}
 }
 
 type imageDetailView struct {

@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	"github.com/eihigh/goban"
+	"github.com/gdamore/tcell"
 	"github.com/lusingander/ecr-browser/domain"
+	"github.com/pkg/browser"
 )
 
 const (
@@ -38,11 +40,28 @@ func listViewElementsFromRepositories(repos []*domain.Repository) []listViewElem
 	return elems
 }
 
+func (v *repositoryListView) operate(key *tcell.EventKey) {
+	switch key.Rune() {
+	case 'l':
+		v.parent.displayImageViews(v.currentRepositoryName())
+	case 'o':
+		v.openWebBrowser()
+	default:
+		v.listViewBase.operate(key)
+	}
+}
+
 func (v *repositoryListView) currentRepositoryName() string {
 	if repo, ok := v.current().(*domain.Repository); ok {
 		return repo.Name
 	}
 	return ""
+}
+
+func (v *repositoryListView) openWebBrowser() error {
+	repo := v.currentRepositoryName()
+	url := createECRConsoleRepositoryURL(repo)
+	return browser.OpenURL(url)
 }
 
 type repositoryDetailView struct {

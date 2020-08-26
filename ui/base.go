@@ -6,7 +6,6 @@ import (
 	"github.com/lusingander/ecr-browser/domain"
 	"github.com/lusingander/ecr-browser/layout"
 	"github.com/lusingander/ecr-browser/util"
-	"github.com/pkg/browser"
 )
 
 const (
@@ -38,7 +37,7 @@ func (v *baseView) operate(key *tcell.EventKey) {
 }
 
 type defaultView struct {
-	list   listView
+	list   *listViewBase
 	detail detailView
 }
 
@@ -56,14 +55,17 @@ func newBaseView(cli domain.ContainerClient, es goban.Events) (*baseView, error)
 }
 
 func createBaseView(b *goban.Box, bc *layout.Breadcrumb, g *gridLayout, dv *defaultView, es goban.Events) *baseView {
-	return &baseView{
+	bv := &baseView{
 		base:       b,
 		Breadcrumb: bc,
 		gridLayout: g,
 		current:    dv,
 		repo:       dv,
 		es:         es,
+		focused:    dv.list,
 	}
+	dv.list.setParent(bv)
+	return bv
 }
 
 func newRepositoryDefaultView(g *gridLayout, cli domain.ContainerClient) (*defaultView, error) {
@@ -73,7 +75,7 @@ func newRepositoryDefaultView(g *gridLayout, cli domain.ContainerClient) (*defau
 	}
 	dv := newRepositoryDetailView(g.detail)
 	lv.addObserver(dv)
-	return &defaultView{lv, dv}, nil
+	return &defaultView{lv.listViewBase, dv}, nil
 }
 
 func (v *baseView) View() {
@@ -97,23 +99,16 @@ func (v *baseView) popBreadcrumb() string {
 }
 
 func (v *baseView) displayRepositoryView() {
-	if _, ok := v.current.list.(*imageListView); ok {
-		v.updateBaseViews(v.repo)
-		v.popBreadcrumb()
-	}
+	v.updateBaseViews(v.repo)
+	v.popBreadcrumb()
 }
 
-func (v *baseView) displayImageViews(cli domain.ContainerClient) error {
-	repo, ok := v.getCurrentRepositoryName()
-	if !ok {
-		return nil
-	}
-
+func (v *baseView) displayImageViews(repo string) error {
 	loading := layout.NewLoadingDialog(v.base, v.es)
 	go loading.Display()
 	defer loading.Close()
 
-	dv, err := v.loadImageDefaultView(v.gridLayout, cli, repo)
+	dv, err := v.loadImageDefaultView(v.gridLayout, client, repo)
 	if err != nil {
 		return err
 	}
@@ -133,41 +128,14 @@ func (v *baseView) newImageDefaultView(g *gridLayout, cli domain.ContainerClient
 	}
 	dv := newImageDetailView(g.detail)
 	lv.addObserver(dv)
-	ret := &defaultView{lv, dv}
+	ret := &defaultView{lv.listViewBase, dv}
 	return ret, nil
-}
-
-func (v *baseView) getCurrentRepositoryName() (name string, ok bool) {
-	lv, ok := v.current.list.(*repositoryListView)
-	if !ok {
-		return "", false
-	}
-	return lv.currentRepositoryName(), true
-}
-
-func (v *baseView) getParentRepositoryName() (name string, ok bool) {
-	lv, ok := v.current.list.(*imageListView)
-	if !ok {
-		return "", false
-	}
-	return lv.repository, true
 }
 
 func (v *baseView) updateBaseViews(dv *defaultView) {
 	util.RemoveViews(dv.list, dv.detail)
 	v.current = dv
 	util.PushViews(dv.list, dv.detail)
-}
-
-func (v *baseView) openWebBrowser() error {
-	rv, ok := v.current.list.(*repositoryListView)
-	if !ok {
-		// TODO: error
-		return nil
-	}
-	repo := rv.currentRepositoryName()
-	url := createECRConsoleRepositoryURL(repo)
-	return browser.OpenURL(url)
 }
 
 type gridLayout struct {
@@ -179,14 +147,6 @@ func createGrid(b *goban.Box) *gridLayout {
 	list := b.GridItem(grid, gridAreaList)
 	detail := b.GridItem(grid, gridAreaDetail)
 	return &gridLayout{list, detail}
-}
-
-type listView interface {
-	goban.View
-	selectNext()
-	selectPrev()
-	selectFirst()
-	selectLast()
 }
 
 type detailView interface {

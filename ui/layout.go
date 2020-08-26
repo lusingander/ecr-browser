@@ -13,6 +13,7 @@ const (
 )
 
 type listViewBase struct {
+	parent    *baseView
 	cur       int
 	box       *goban.Box
 	elements  []listViewElement
@@ -40,6 +41,10 @@ func (v *listViewBase) operate(key *tcell.EventKey) {
 	case 'G':
 		v.selectLast()
 	}
+}
+
+func (v *listViewBase) setParent(parent *baseView) {
+	v.parent = parent
 }
 
 func (v *listViewBase) View() {
