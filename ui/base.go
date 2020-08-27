@@ -19,25 +19,33 @@ type operator interface {
 	operate(*tcell.EventKey)
 }
 
-type viewStack [][]goban.View
-
-func newViewStack() viewStack {
-	return make([][]goban.View, 0)
+type viewStack struct {
+	stack [][]goban.View
 }
 
-func (s viewStack) push(vs ...goban.View) {
-	s = append(s, vs)
+func newViewStack() *viewStack {
+	return &viewStack{
+		stack: make([][]goban.View, 0),
+	}
 }
 
-func (s viewStack) pop(vs ...goban.View) []goban.View {
-	ret := s[len(s)-1]
-	s = s[:len(s)-1]
+func (s *viewStack) length() int {
+	return len(s.stack)
+}
+
+func (s *viewStack) push(vs ...goban.View) {
+	s.stack = append(s.stack, vs)
+}
+
+func (s *viewStack) pop(vs ...goban.View) []goban.View {
+	ret := s.stack[len(s.stack)-1]
+	s.stack = s.stack[:len(s.stack)-1]
 	return ret
 }
 
 type ui struct {
 	*baseView
-	viewStack
+	*viewStack
 	focused operator
 }
 
@@ -59,7 +67,7 @@ func (u *ui) pushViews(vs ...goban.View) {
 }
 
 func (u *ui) popViews() {
-	if len(u.viewStack) > 0 {
+	if u.viewStack.length() > 0 {
 		vs := u.viewStack.pop()
 		util.RemoveViews(vs...)
 	}
