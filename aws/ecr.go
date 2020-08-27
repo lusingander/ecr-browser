@@ -9,19 +9,26 @@ import (
 
 type awsEcrClinet struct {
 	cli *ecr.ECR
-	cacheMap
+	repositoryCache
+	imageCacheMap
 }
 
-type cacheMap map[string][]*domain.Image
+type repositoryCache []*domain.Repository
+
+type imageCacheMap map[string][]*domain.Image
 
 func NewAwsEcrClient() domain.ContainerClient {
 	return &awsEcrClinet{
-		cli:      createClient(),
-		cacheMap: make(cacheMap),
+		cli:             createClient(),
+		repositoryCache: make(repositoryCache, 0),
+		imageCacheMap:   make(imageCacheMap),
 	}
 }
 
 func (c *awsEcrClinet) FetchAllRepositories() ([]*domain.Repository, error) {
+	if len(c.repositoryCache) > 0 {
+		return c.repositoryCache, nil
+	}
 	input := &ecr.DescribeRepositoriesInput{
 		MaxResults: aws.Int64(100),
 	}
@@ -40,11 +47,12 @@ func (c *awsEcrClinet) FetchAllRepositories() ([]*domain.Repository, error) {
 		}
 		input.SetNextToken(nextToken)
 	}
+	c.repositoryCache = ret
 	return ret, nil
 }
 
 func (c *awsEcrClinet) FetchAllImages(repo string) ([]*domain.Image, error) {
-	if cache, ok := c.cacheMap[repo]; ok {
+	if cache, ok := c.imageCacheMap[repo]; ok {
 		return cache, nil
 	}
 	input := &ecr.DescribeImagesInput{
@@ -66,7 +74,7 @@ func (c *awsEcrClinet) FetchAllImages(repo string) ([]*domain.Image, error) {
 		}
 		input.SetNextToken(nextToken)
 	}
-	c.cacheMap[repo] = ret
+	c.imageCacheMap[repo] = ret
 	return ret, nil
 }
 

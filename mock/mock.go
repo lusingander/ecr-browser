@@ -10,28 +10,41 @@ import (
 )
 
 type mockClinet struct {
-	cacheMap
+	repositoryCache
+	imageCacheMap
 }
 
-type cacheMap map[string][]*domain.Image
+type repositoryCache []*domain.Repository
+
+type imageCacheMap map[string][]*domain.Image
 
 func NewMockClient() domain.ContainerClient {
 	return &mockClinet{
-		cacheMap: make(cacheMap),
+		repositoryCache: make(repositoryCache, 0),
+		imageCacheMap:   make(imageCacheMap),
 	}
 }
 
-func (*mockClinet) FetchAllRepositories() ([]*domain.Repository, error) {
+func (c *mockClinet) FetchAllRepositories() ([]*domain.Repository, error) {
+	if len(c.repositoryCache) > 0 {
+		return c.repositoryCache, nil
+	}
+
+	time.Sleep(time.Millisecond * 500)
+
 	n := 20
 	repos := make([]*domain.Repository, 0, n)
 	for i := 1; i <= n; i++ {
 		repos = append(repos, repo(i))
 	}
+
+	c.repositoryCache = repos
+
 	return repos, nil
 }
 
 func (c *mockClinet) FetchAllImages(repo string) ([]*domain.Image, error) {
-	if cache, ok := c.cacheMap[repo]; ok {
+	if cache, ok := c.imageCacheMap[repo]; ok {
 		return cache, nil
 	}
 
@@ -43,7 +56,7 @@ func (c *mockClinet) FetchAllImages(repo string) ([]*domain.Image, error) {
 		images = append(images, image(i, repo))
 	}
 
-	c.cacheMap[repo] = images
+	c.imageCacheMap[repo] = images
 
 	return images, nil
 }
