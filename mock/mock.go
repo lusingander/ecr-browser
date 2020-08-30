@@ -72,7 +72,7 @@ func repo(i int) *domain.Repository {
 
 func image(i int, repo string) *domain.Image {
 	is := strconv.Itoa(i)
-	commit := fmt.Sprintf("%x", sha256.Sum256([]byte(is)))[:7]
+	commit := fmt.Sprintf("%x", sha256.Sum256([]byte(repo+is)))[:7]
 	var tags []string
 	if i == 1 {
 		tags = []string{commit, "latest"}
@@ -82,7 +82,7 @@ func image(i int, repo string) *domain.Image {
 		tags = []string{commit}
 	}
 	pushedAt := time.Now().AddDate(0, 0, -i)
-	digest := fmt.Sprintf("sha256:%x", sha256.Sum256([]byte(repo+is)))
+	digest := fmt.Sprintf("sha256:%x", sha256.Sum256([]byte(repo+is+repo)))
 	sizeByte := 1024 * 1024 * i / 2
 	return domain.NewImage(tags, pushedAt, digest, int64(sizeByte))
 }
